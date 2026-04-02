@@ -314,7 +314,7 @@ $('fileInput').addEventListener('change',function(e){
       d=d.filter(function(q){return q&&q.sentence;});
       if(!d.length){toast('لا توجد اسئلة صالحة في الملف','r');return;}
       load(d); toast('تم تحميل '+d.length+' سؤال','g');
-    }catch(x){}
+    }catch(x){toast('خطأ في قراءة الملف: '+x.message,'r');}
   };
   rd.readAsArrayBuffer(file);
   $('fileInput').value='';
@@ -617,7 +617,7 @@ function renderPracticeQuestion(q){
 function save(){
   if(!qs||qs.length===0)return;
   var sessionData={qs:qs,ci:ci,ok:ok,er:er,erItems:erItems,ruleErr:ruleErr,cache:cache,DATA_RAW:DATA_RAW};
-  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
+  var sessions=JSON.parse((function(){try{return localStorage.getItem('grammar_sessions_list')}catch(e){return null}}())||'[]');
   if(!currentSessionId){
     currentSessionId='sess_'+Date.now();
     var dateStr=new Date().toLocaleDateString('ar-EG'), timeStr=new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
@@ -626,10 +626,10 @@ function save(){
     var idx=sessions.findIndex(function(s){return s.id===currentSessionId;});
     if(idx!==-1)sessions[idx].data=sessionData;
   }
-  try{localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions));}catch(e){}
+  try{(function(){try{return localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions)}catch(e){return null}}()));}catch(e){}
 }
 function showSessionsModal(){
-  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
+  var sessions=JSON.parse((function(){try{return localStorage.getItem('grammar_sessions_list')}catch(e){return null}}())||'[]');
   var listDiv=$('sessionsList'); listDiv.innerHTML='';
   if(sessions.length===0){listDiv.innerHTML='<p style="text-align:center;color:var(--t3);">لا توجد جلسات محفوظة.</p>';}
   else{
@@ -644,7 +644,7 @@ function showSessionsModal(){
 }
 function closeSessionsModal(){$('sessionsModal').classList.remove('show');}
 function loadSpecificSession(sid){
-  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
+  var sessions=JSON.parse((function(){try{return localStorage.getItem('grammar_sessions_list')}catch(e){return null}}())||'[]');
   var sess=sessions.find(function(s){return s.id===sid;}); if(!sess)return;
   currentSessionId=sess.id; var d=sess.data;
   qs=d.qs; ci=d.ci; ok=d.ok; er=d.er; erItems=d.erItems||[]; ruleErr=d.ruleErr||{}; cache=d.cache||{}; DATA_RAW=d.DATA_RAW;
@@ -653,9 +653,9 @@ function loadSpecificSession(sid){
   updateStats(); showQ(); toast('✅ تم الاستعادة','g');
 }
 function deleteSpecificSession(sid){
-  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
+  var sessions=JSON.parse((function(){try{return localStorage.getItem('grammar_sessions_list')}catch(e){return null}}())||'[]');
   sessions=sessions.filter(function(s){return s.id!==sid;});
-  try{localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions));}catch(e){}
+  try{(function(){try{return localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions)}catch(e){return null}}()));}catch(e){}
   if(currentSessionId===sid) currentSessionId=null;
   if(sessions.length===0){ $('resumeBanner').style.display='none'; closeSessionsModal(); $('quizDiv').style.display='none'; $('emptyDiv').style.display='block'; DATA_RAW=null; qs=[]; }
   else{ showSessionsModal(); }
@@ -664,7 +664,7 @@ function deleteSpecificSession(sid){
 function clearSave(){currentSessionId=null;}
 function doDiscard(){currentSessionId=null; $('resumeBanner').style.display='none'; load(originalQs);}
 (function(){
-  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
+  var sessions=JSON.parse((function(){try{return localStorage.getItem('grammar_sessions_list')}catch(e){return null}}())||'[]');
   if(sessions.length>0){ $('resumeInfo').textContent='لديك '+sessions.length+' جلسة محفوظة.'; $('resumeBanner').style.display='flex'; }
 })();
 </script>

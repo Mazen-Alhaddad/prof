@@ -1247,8 +1247,8 @@ function handleFileUpload(e) {
       if (!Array.isArray(data)) throw new Error('يجب أن يكون الملف مصفوفة JSON');
       const valid = data.filter(w => w.en && w.ar && Array.isArray(w.type) && w.type.length);
       if (!valid.length) throw new Error('لم يتم العثور على كلمات صالحة');
-      localStorage.setItem('crescent_vocab_json', JSON.stringify(valid));
       loadWords(valid);
+      try{localStorage.setItem('crescent_vocab_json', JSON.stringify(valid));}catch(e){}
       showToast(\`✅ تم تحميل \${valid.length} كلمة بنجاح\`, 'green');
     } catch (err) {
       showToast(\`❌ خطأ: \${err.message}\`, 'red');
