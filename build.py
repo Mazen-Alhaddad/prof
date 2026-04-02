@@ -44,17 +44,12 @@ function openApp(appKey) {{
   const app = APPS[appKey];
   if (!app) return;
 
-  // إنشاء blob URL لعزل كل تطبيق بسياق JavaScript منفصل
-  const blob = new Blob([app.html], {{type: 'text/html'}});
-  const url = URL.createObjectURL(blob);
-
   const appContainer = document.getElementById('appContainer');
   appContainer.innerHTML = '';
 
   const iframe = document.createElement('iframe');
-  iframe.src = url;
+  iframe.srcdoc = app.html;
   iframe.style.cssText = 'width:100%;height:100%;border:none;display:block;';
-  iframe.onload = () => URL.revokeObjectURL(url);
   appContainer.appendChild(iframe);
 
   document.getElementById('appStyles').innerHTML = '';
