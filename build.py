@@ -44,22 +44,20 @@ function openApp(appKey) {{
   const app = APPS[appKey];
   if (!app) return;
 
-  const doc = new DOMParser().parseFromString(app.html, 'text/html');
-
-  const appStyles = document.getElementById('appStyles');
-  appStyles.innerHTML = '';
-  doc.querySelectorAll('style').forEach(s => appStyles.appendChild(s.cloneNode(true)));
+  // إنشاء blob URL لعزل كل تطبيق بسياق JavaScript منفصل
+  const blob = new Blob([app.html], {{type: 'text/html'}});
+  const url = URL.createObjectURL(blob);
 
   const appContainer = document.getElementById('appContainer');
-  appContainer.innerHTML = doc.body.innerHTML;
+  appContainer.innerHTML = '';
 
-  doc.querySelectorAll('script').forEach(old => {{
-    const ns = document.createElement('script');
-    if (old.src) {{ ns.src = old.src; }}
-    else {{ ns.textContent = old.textContent; }}
-    appContainer.appendChild(ns);
-  }});
+  const iframe = document.createElement('iframe');
+  iframe.src = url;
+  iframe.style.cssText = 'width:100%;height:100%;border:none;display:block;';
+  iframe.onload = () => URL.revokeObjectURL(url);
+  appContainer.appendChild(iframe);
 
+  document.getElementById('appStyles').innerHTML = '';
   document.getElementById('overlayTitle').textContent = app.title;
   document.getElementById('overlay').classList.add('active');
   document.body.style.overflow = 'hidden';
