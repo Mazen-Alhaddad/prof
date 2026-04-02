@@ -1,0 +1,2159 @@
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Professional Quiz</title>
+<meta name="theme-color" content="#0d1117">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--elevated:#1e2430;--card:#1a1f2e;
+  --border:#3a4150;--bm:#252b38;
+  --blue:#79b8ff;--blue2:#2a7de1;--purple:#d2a8ff;--purple2:#8957e5;
+  --green:#56d364;--green2:#2ea043;--red:#ff7b72;--orange:#ffa657;
+  --t1:#f0f6fc;--t2:#adbac7;--t3:#636e7b;
+  --r:12px;--rs:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'Noto Kufi Arabic','Segoe UI',Tahoma,Arial,sans-serif;
+  background:var(--bg);color:var(--t1);
+  height:100dvh;display:flex;flex-direction:column;align-items:center;
+  padding:0 12px;
+  -webkit-user-select:none;user-select:none;
+  overflow:hidden;
+}
+.wrap{width:100%;max-width:680px;display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;}
+#loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;}
+.loader-icon{font-size:2.5rem;animation:spin 1.5s linear infinite;}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.loader-text{font-family:Consolas,monospace;font-size:0.78rem;color:var(--t2);}
+header{display:flex;flex-direction:column;align-items:center;padding:16px 0 12px;gap:12px;flex-shrink:0;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo:hover .logo-text{color:var(--blue);transition:.18s;}
+.logo:hover .logo-icon{box-shadow:0 0 10px rgba(121,184,255,.35);transition:.18s;}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--blue2),var(--purple2));border-radius:var(--rs);display:grid;place-items:center;font-size:18px;}
+.logo-text{font-family:'Segoe UI',Arial,sans-serif;font-size:0.88rem;font-weight:700;line-height:1.3;}
+.logo-text small{display:block;font-size:0.58rem;color:var(--t2);font-weight:400;}
+.btn-upload{display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:6px 10px;cursor:pointer;font-family:Consolas,monospace;font-size:0.68rem;color:var(--t2);transition:.18s;white-space:nowrap;flex-shrink:0;}
+.btn-upload:hover{border-color:var(--blue);color:var(--blue);}
+.resume-banner{display:none;align-items:center;justify-content:space-between;gap:10px;background:rgba(86,211,100,.08);border:1px solid rgba(86,211,100,.25);border-radius:var(--rs);padding:7px 14px;margin-bottom:6px;font-size:0.76rem;color:var(--t2);}
+.resume-banner.show{display:flex;}
+.resume-info{flex:1;}
+.resume-info strong{color:var(--green);display:block;font-size:0.8rem;margin-bottom:2px;}
+.resume-actions{display:flex;gap:6px;flex-shrink:0;}
+.btn-resume{background:var(--green2);border:none;border-radius:6px;padding:5px 12px;color:#fff;font-size:0.72rem;cursor:pointer;font-family:inherit;}
+.btn-discard{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--t3);font-size:0.72rem;cursor:pointer;font-family:inherit;}
+.btn-discard:hover{border-color:var(--red);color:var(--red);}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-shrink:0;}
+.tab{flex:1;padding:8px 6px;border-radius:var(--rs);border:1px solid var(--border);background:var(--surface);color:var(--t2);font-family:'Noto Kufi Arabic',sans-serif;font-size:0.72rem;cursor:pointer;text-align:center;transition:.18s;}
+.tab.active{background:rgba(137,87,229,.18);border-color:var(--purple);color:var(--purple);font-weight:700;}
+.tab:hover:not(.active){border-color:var(--blue);color:var(--blue);}
+.tab.hidden{display:none;}
+.tab-content{display:none;flex:1;min-height:0;overflow-y:auto;}.tab-content.active{display:flex;flex-direction:column;}
+.ctrl-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);
+  padding:8px 14px;margin-bottom:10px;gap:12px;
+}
+.ctrl-bar-label{font-family:Consolas,monospace;font-size:0.65rem;color:var(--t3);}
+.shuffle-toggle{display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0;}
+.shuffle-toggle input{display:none;}
+.toggle-track{
+  width:38px;height:20px;background:var(--elevated);border:1px solid var(--border);
+  border-radius:99px;position:relative;transition:.22s;cursor:pointer;flex-shrink:0;
+}
+.toggle-thumb{
+  position:absolute;top:2px;right:2px;width:14px;height:14px;
+  background:var(--t3);border-radius:50%;transition:.22s;
+}
+.shuffle-toggle input:checked + .toggle-track{background:rgba(42,125,225,.2);border-color:var(--blue2);}
+.shuffle-toggle input:checked + .toggle-track .toggle-thumb{right:calc(100% - 16px);background:var(--blue);}
+.toggle-lbl{font-family:Consolas,monospace;font-size:0.68rem;color:var(--t3);transition:.18s;white-space:nowrap;}
+.shuffle-toggle input:checked ~ .toggle-lbl{color:var(--blue);}
+.shuffle-badge{
+  font-family:Consolas,monospace;font-size:0.6rem;padding:2px 7px;border-radius:4px;
+  background:rgba(42,125,225,.1);border:1px solid rgba(42,125,225,.2);color:var(--blue);
+  white-space:nowrap;transition:.18s;
+}
+.shuffle-badge.off{background:rgba(99,110,123,.1);border-color:var(--border);color:var(--t3);}
+.pg-wrap{margin-bottom:10px;flex-shrink:0;}
+.pg-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.pg-label{font-size:0.68rem;color:var(--t2);font-family:Consolas,monospace;}
+.stat-row{display:flex;gap:10px;}
+.stat{display:flex;align-items:center;gap:4px;font-size:0.66rem;font-family:Consolas,monospace;}
+.dot{width:6px;height:6px;border-radius:50%;}
+.dot.ok{background:var(--green);}.dot.er{background:var(--red);}
+.bar-track{height:4px;background:var(--elevated);border-radius:99px;overflow:hidden;}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--blue2),var(--purple2));border-radius:99px;transition:width .4s;width:0%;}
+.card{background:#0f1623;border:3px solid #374151;border-radius:var(--r);padding:18px 20px;margin-bottom:8px;display:flex;flex-direction:column;}
+.card.ai-expanded{flex:1;min-height:0;}
+.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.card-num{font-family:Consolas,monospace;font-size:0.62rem;color:var(--t3);padding:2px 7px;background:var(--elevated);border-radius:4px;border:1px solid var(--bm);}
+.card-source{font-family:'Noto Kufi Arabic',sans-serif;font-size:0.6rem;color:var(--blue);padding:2px 9px;background:rgba(42,125,225,.1);border-radius:4px;border:1px solid rgba(42,125,225,.25);white-space:nowrap;}
+.q-text{font-size:0.9rem;color:var(--t1);line-height:1.8;margin-bottom:14px;text-align:center;}
+.q-note {
+  background: rgba(121, 184, 255, 0.05);
+  border: 1px dashed rgba(121, 184, 255, 0.25);
+  border-radius: var(--rs);
+  margin-top: -4px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  display: none;
+}
+.q-note.show { display: block; }
+.q-note-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px; cursor: pointer; user-select: none;
+  font-family: Consolas, monospace; font-size: 0.68rem; color: var(--blue);
+}
+.q-note-chevron {
+  font-size: 0.6rem; color: var(--blue); transition: .2s; margin-right: auto;
+}
+.q-note.collapsed .q-note-chevron { transform: rotate(180deg); }
+.q-note-body {
+  padding: 8px 12px; font-size: 0.78rem; color: var(--t1);
+  border-top: 1px solid rgba(121, 184, 255, 0.12);
+  line-height: 1.6; text-align: right;
+}
+.q-note.collapsed .q-note-body { display: none; }
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.choice{padding:12px 10px;border-radius:var(--rs);border:2px solid var(--border);background:var(--elevated);color:var(--t1);font-family:'Noto Kufi Arabic',sans-serif;font-size:0.82rem;cursor:pointer;transition:.18s;text-align:center;line-height:1.5;}
+.choice:hover:not(:disabled){border-color:var(--blue);color:var(--blue);background:rgba(121,184,255,.07);transform:translateY(-1px);}
+.choice:disabled{cursor:not-allowed;transform:none;}
+.choice.correct{background:rgba(63,185,80,.7);border-color:#3fb950;color:#fff;box-shadow:0 0 12px rgba(63,185,80,.4);}
+.choice.wrong{background:rgba(255,123,114,.18);border-color:var(--red);color:var(--red);}
+.choice.dim{opacity:.22;}
+.rationale{
+  display:none;margin-top:12px;
+  background:rgba(79,184,255,.05);
+  border:1px solid rgba(79,184,255,.18);
+  border-radius:var(--rs);overflow:hidden;flex-shrink:0;
+}
+.rationale.show{display:block;}
+.rationale-head{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 12px;
+  background:rgba(79,184,255,.08);
+  border-bottom:1px solid rgba(79,184,255,.12);
+  font-family:Consolas,monospace;font-size:0.62rem;color:var(--blue);
+  cursor:pointer;user-select:none;
+}
+.rationale-head span{font-size:0.6rem;color:var(--t3);}
+.rationale-chevron{font-size:0.6rem;color:var(--t3);transition:.2s;margin-right:auto;}
+.rationale.collapsed .rationale-chevron{transform:rotate(180deg);}
+.rationale-body{
+  padding:10px 14px;font-size:0.79rem;color:var(--t2);
+  line-height:1.75;text-align:right;
+  max-height:200px;overflow-y:auto;
+}
+.rationale.collapsed .rationale-body{display:none;}
+.nav{display:flex;align-items:center;justify-content:space-between;margin:8px 0 6px;gap:8px;flex-shrink:0;}
+.btn-nav{display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:8px 13px;color:var(--t2);font-family:'Noto Kufi Arabic',sans-serif;font-size:0.78rem;font-weight:600;cursor:pointer;transition:.18s;}
+.btn-nav:hover:not(:disabled){border-color:var(--purple);color:var(--purple);}
+.btn-nav:disabled{opacity:.3;cursor:not-allowed;}
+.btn-next{background:linear-gradient(135deg,var(--blue2),var(--purple2));border-color:transparent;color:#fff;padding:8px 18px;font-weight:700;}
+.btn-next:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 14px rgba(88,166,255,.3);border-color:transparent;color:#fff;}
+.btn-next:disabled{background:var(--elevated)!important;border:1px solid var(--border)!important;color:var(--t3)!important;cursor:not-allowed;transform:none;box-shadow:none;}
+.nav-idx{font-family:Consolas,monospace;font-size:0.7rem;color:var(--t3);}
+.results{display:none;flex-direction:column;align-items:center;padding:28px 16px 20px;text-align:center;background:var(--card);border:1px solid var(--border);border-radius:var(--r);position:relative;overflow-x:hidden;overflow-y:visible;}
+.results::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue2),var(--purple2),var(--green2));}
+.results.show{display:flex;}
+.ring{width:90px;height:90px;margin-bottom:18px;}
+.ring circle{fill:none;stroke-width:8;stroke-linecap:round;}
+.ring .tr{stroke:var(--elevated);}
+.ring .fi{stroke:var(--blue);stroke-dasharray:251;stroke-dashoffset:251;transition:stroke-dashoffset 1s;transform-origin:center;transform:rotate(-90deg);}
+.ring-pct{font-family:Consolas,monospace;font-size:0.88rem;font-weight:700;fill:var(--t1);}
+.res-ttl{font-family:Consolas,monospace;font-size:1.2rem;font-weight:700;margin-bottom:5px;}
+.res-sub{font-size:0.76rem;color:var(--t2);margin-bottom:18px;}
+.res-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;width:100%;max-width:280px;margin-bottom:16px;}
+.res-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:12px 8px;cursor:pointer;transition:.18s;}
+.res-box:hover{transform:translateY(-2px);}
+.res-box.ok:hover{border-color:var(--green);}
+.res-box.er:hover{border-color:var(--red);}
+.res-num{font-family:Consolas,monospace;font-size:1.5rem;font-weight:700;margin-bottom:4px;}
+.res-lbl{font-size:0.6rem;color:var(--t2);font-family:Consolas,monospace;}
+.res-hint{font-size:0.55rem;color:var(--t3);font-family:Consolas,monospace;margin-top:3px;}
+.res-box.ok .res-num{color:var(--green);}
+.res-box.er .res-num{color:var(--red);}
+.res-actions{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;justify-content:center;}
+.btn-restart{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:9px 18px;cursor:pointer;font-family:'Noto Kufi Arabic',sans-serif;font-size:0.8rem;font-weight:600;color:var(--t1);transition:.18s;}
+.btn-restart:hover{border-color:var(--blue);color:var(--blue);}
+.review-panel{display:none;width:100%;margin-top:14px;text-align:right;}
+.review-panel.show{display:block;}
+.review-title{font-family:Consolas,monospace;font-size:0.72rem;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bm);}
+.review-title.er{color:var(--red);}
+.review-title.ok{color:var(--green);}
+.review-item{background:var(--elevated);border:1px solid var(--bm);border-radius:var(--rs);padding:10px 12px;margin-bottom:7px;text-align:right;}
+.review-q{font-size:0.78rem;color:var(--t1);margin-bottom:8px;line-height:1.65;}
+.review-q span{font-family:Consolas,monospace;font-size:0.6rem;color:var(--t3);margin-left:6px;}
+.review-opts{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.review-opt{padding:6px 8px;border-radius:6px;font-size:0.72rem;border:1px solid var(--border);background:var(--card);color:var(--t2);text-align:center;}
+.review-opt.correct{background:rgba(63,185,80,.15);border-color:var(--green2);color:var(--green);}
+.review-opt.chosen-wrong{background:rgba(255,123,114,.12);border-color:var(--red);color:var(--red);}
+.review-rationale{margin-top:7px;padding:8px 10px;background:rgba(79,184,255,.05);border:1px solid rgba(79,184,255,.14);border-radius:6px;font-size:0.71rem;color:var(--t2);line-height:1.7;}
+.review-rationale-lbl{font-family:Consolas,monospace;font-size:0.58rem;color:var(--blue);margin-bottom:3px;}
+.empty{text-align:center;padding:55px 20px;border:1px dashed var(--border);border-radius:var(--r);margin:16px 0;}
+.empty-icon{font-size:2.8rem;display:block;margin-bottom:14px;}
+.empty-title{font-size:0.95rem;font-weight:700;margin-bottom:8px;}
+.empty-desc{font-size:0.78rem;color:var(--t2);line-height:1.7;margin-bottom:18px;}
+.notes-section{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;}
+.notes-head{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:linear-gradient(135deg,rgba(42,125,225,.06),rgba(137,87,229,.06));border-bottom:1px solid var(--border);}
+.notes-head:hover{background:linear-gradient(135deg,rgba(42,125,225,.12),rgba(137,87,229,.12));}
+.notes-icon{font-size:1.1rem;}
+.notes-title{font-size:0.82rem;font-weight:700;color:var(--t1);flex:1;}
+.notes-tag{font-family:Consolas,monospace;font-size:0.58rem;color:var(--purple);padding:2px 7px;background:rgba(137,87,229,.12);border:1px solid rgba(137,87,229,.25);border-radius:4px;}
+.chevron{font-size:0.6rem;color:var(--t3);transition:.2s;}
+.notes-section.open .chevron{transform:rotate(180deg);}
+.notes-body{display:none;padding:14px 16px;}
+.notes-section.open .notes-body{display:block;}
+.note-item{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:var(--rs);background:var(--elevated);margin-bottom:6px;border-right:3px solid var(--blue2);}
+.note-item.purple{border-color:var(--purple2);}
+.note-item.green{border-color:var(--green2);}
+.note-item.orange{border-color:var(--orange);}
+.note-text{font-size:0.78rem;color:var(--t2);line-height:1.7;}
+.note-text b{color:var(--t1);}
+.note-text em{color:var(--blue);font-style:normal;font-family:Consolas,monospace;font-size:.72rem;}
+.kv-table{width:100%;border-collapse:collapse;font-size:0.76rem;margin-top:4px;}
+.kv-table th{background:var(--elevated);color:var(--t2);font-size:0.65rem;font-family:Consolas,monospace;padding:7px 10px;border:1px solid var(--bm);text-align:right;}
+.kv-table td{padding:7px 10px;border:1px solid var(--bm);color:var(--t2);vertical-align:top;line-height:1.6;}
+.kv-table tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+.kv-table td:first-child{color:var(--blue);font-family:Consolas,monospace;font-size:0.7rem;font-weight:700;}
+.toast-wrap{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:998;display:flex;flex-direction:column;gap:6px;pointer-events:none;width:calc(100% - 28px);max-width:360px;}
+.toast{background:var(--elevated);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:0.76rem;color:var(--t1);display:flex;align-items:center;gap:8px;animation:tin .3s cubic-bezier(.34,1.56,.64,1) forwards;}
+.toast.g{border-color:var(--green);}.toast.r{border-color:var(--red);}
+.toast.out{animation:tout .25s ease forwards;}
+@keyframes tin{from{transform:translateY(16px) scale(.95);opacity:0;}to{transform:translateY(0) scale(1);opacity:1;}}
+@keyframes tout{from{opacity:1;}to{transform:translateY(8px) scale(.95);opacity:0;}}
+.btn-edit{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:7px 13px;cursor:pointer;font-family:'Noto Kufi Arabic',sans-serif;font-size:0.72rem;color:var(--t2);transition:.18s;white-space:nowrap;}
+.btn-edit:hover{border-color:var(--orange);color:var(--orange);}
+.btn-edit.active{background:rgba(255,166,87,.12);border-color:var(--orange);color:var(--orange);font-weight:700;}
+.edit-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:900;align-items:center;justify-content:center;padding:16px;}
+.edit-overlay.show{display:flex;}
+.edit-modal{background:var(--card);border:1px solid var(--orange);border-radius:var(--r);width:100%;max-width:640px;max-height:90dvh;overflow-y:auto;padding:20px;position:relative;}
+.edit-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bm);}
+.edit-modal-title{font-family:Consolas,monospace;font-size:0.82rem;font-weight:700;color:var(--orange);display:flex;align-items:center;gap:7px;}
+.btn-edit-close{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--t3);font-size:0.72rem;cursor:pointer;font-family:inherit;transition:.15s;}
+.btn-edit-close:hover{border-color:var(--red);color:var(--red);}
+.edit-field-label{font-size:0.68rem;color:var(--t3);font-family:Consolas,monospace;margin-bottom:5px;margin-top:12px;display:block;}
+.edit-textarea{width:100%;background:var(--elevated);border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;color:var(--t1);font-family:'Noto Kufi Arabic',sans-serif;font-size:0.84rem;line-height:1.7;resize:vertical;min-height:72px;transition:.15s;}
+.edit-textarea:focus{outline:none;border-color:var(--orange);background:var(--bm);}
+.edit-choices-list{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+.edit-choice-row{display:flex;align-items:center;gap:10px;background:var(--elevated);border:1px solid var(--border);border-radius:var(--rs);padding:8px 12px;transition:.15s;}
+.edit-choice-row.is-correct{border-color:var(--green2);background:rgba(46,160,67,.08);}
+.edit-choice-input{flex:1;background:transparent;border:none;color:var(--t1);font-family:'Noto Kufi Arabic',sans-serif;font-size:0.82rem;outline:none;min-width:0;}
+.edit-choice-input::placeholder{color:var(--t3);}
+.edit-correct-radio{display:flex;align-items:center;gap:5px;cursor:pointer;flex-shrink:0;}
+.edit-correct-radio input[type=radio]{accent-color:var(--green);width:15px;height:15px;cursor:pointer;}
+.edit-correct-label{font-size:0.65rem;color:var(--t3);font-family:Consolas,monospace;white-space:nowrap;}
+.edit-correct-radio.selected .edit-correct-label{color:var(--green);}
+.edit-add-choice{display:flex;align-items:center;gap:6px;background:none;border:1px dashed var(--border);border-radius:var(--rs);padding:7px 12px;color:var(--t3);font-size:0.72rem;cursor:pointer;font-family:'Noto Kufi Arabic',sans-serif;width:100%;margin-top:4px;transition:.15s;}
+.edit-add-choice:hover{border-color:var(--blue);color:var(--blue);}
+.edit-del-choice{background:none;border:none;color:var(--t3);cursor:pointer;font-size:0.8rem;padding:2px 4px;border-radius:4px;transition:.12s;flex-shrink:0;}
+.edit-del-choice:hover{color:var(--red);background:rgba(255,123,114,.1);}
+.edit-actions{display:flex;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid var(--bm);}
+.btn-edit-save{flex:1;background:linear-gradient(135deg,var(--green2),#2d9e4a);border:none;border-radius:var(--rs);padding:9px 10px;color:#fff;font-family:'Noto Kufi Arabic',sans-serif;font-size:0.76rem;font-weight:700;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:5px;}
+.btn-edit-save:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(46,160,67,.35);}
+.btn-edit-export{flex:1;background:var(--surface);border:1px solid var(--blue);border-radius:var(--rs);padding:9px 10px;color:var(--blue);font-family:'Noto Kufi Arabic',sans-serif;font-size:0.76rem;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:5px;}
+.btn-edit-export:hover{background:rgba(121,184,255,.08);}
+body.edit-mode .card{border-color:var(--orange)!important;box-shadow:0 0 0 1px rgba(255,166,87,.2);}
+body.edit-mode .btn-edit{background:rgba(255,166,87,.1);}
+.btn-copy-q{
+  display:inline-flex;align-items:center;gap:4px;
+  background:none;border:1px solid var(--border);border-radius:6px;
+  padding:3px 9px;color:var(--t3);font-size:0.65rem;cursor:pointer;
+  font-family:Consolas,monospace;transition:.18s;flex-shrink:0;
+  -webkit-user-select:none;user-select:none;
+}
+.btn-copy-q:hover{border-color:var(--purple);color:var(--purple);}
+.btn-copy-q.copied{border-color:var(--green)!important;color:var(--green)!important;}
+.btn-edit-delete{flex:1;background:none;border:1px solid var(--red);border-radius:var(--rs);padding:9px 10px;color:var(--red);font-family:'Noto Kufi Arabic',sans-serif;font-size:0.76rem;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:5px;}
+.btn-edit-delete:hover{background:rgba(255,123,114,.12);transform:translateY(-1px);}
+.btn-ai-explain{
+  display:none;width:100%;margin-top:10px;
+  background:linear-gradient(135deg,rgba(42,125,225,.15),rgba(137,87,229,.15));
+  border:1px solid rgba(137,87,229,.4);border-radius:var(--rs);
+  padding:10px 14px;color:var(--purple);
+  font-family:'Noto Kufi Arabic',sans-serif;font-size:0.8rem;font-weight:700;
+  cursor:pointer;transition:.22s;
+  display:none;align-items:center;justify-content:center;gap:7px;
+}
+.btn-ai-explain:hover:not(:disabled){
+  background:linear-gradient(135deg,rgba(42,125,225,.25),rgba(137,87,229,.25));
+  border-color:var(--purple);transform:translateY(-1px);
+}
+.btn-ai-explain:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+.btn-ai-explain.visible{display:flex;}
+.ai-box{
+  display:none;margin-top:10px;
+  background:linear-gradient(135deg,rgba(42,125,225,.05),rgba(137,87,229,.05));
+  border:1px solid rgba(137,87,229,.28);border-radius:var(--rs);overflow:hidden;
+  flex-direction:column;
+}
+.ai-box.show{display:flex;flex:1;min-height:0;}
+.ai-box.collapsed .ai-box-body,
+.ai-box.collapsed .ai-rating{display:none!important;}
+.ai-box-head{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 13px;
+  background:rgba(137,87,229,.1);
+  border-bottom:1px solid rgba(137,87,229,.2);
+  font-family:Consolas,monospace;font-size:0.62rem;color:var(--purple);
+  flex-shrink:0;cursor:pointer;user-select:none;
+}
+.ai-box-head .ai-badge{
+  font-size:0.54rem;padding:1px 6px;border-radius:3px;
+  background:rgba(137,87,229,.2);border:1px solid rgba(137,87,229,.35);
+  color:var(--purple);margin-right:auto;
+}
+.ai-box-body{padding:12px 14px;font-size:0.8rem;color:var(--t2);line-height:1.85;text-align:right;overflow-y:auto;flex:1;}
+.ai-chevron{font-size:0.6rem;color:var(--t3);transition:.2s;margin-right:2px;}
+.ai-box.collapsed .ai-chevron{transform:rotate(180deg);}
+.btn-ai-refresh{
+  background:none;border:none;padding:2px 5px;cursor:pointer;
+  color:var(--t3);font-size:0.8rem;transition:.18s;border-radius:4px;
+  display:none;align-items:center;
+}
+.btn-ai-refresh:hover{color:var(--purple);background:rgba(137,87,229,.15);}
+.ai-box-body strong{color:var(--t1);}
+.ai-box-body .ai-section-title{
+  display:block;color:var(--blue);font-family:Consolas,monospace;
+  font-size:0.66rem;margin:10px 0 4px;font-weight:700;
+}
+.ai-loading{
+  display:flex;align-items:center;gap:10px;padding:14px;
+  color:var(--t3);font-size:0.76rem;
+}
+.ai-dots span{
+  display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:var(--purple);margin:0 2px;
+  animation:aiDot 1.2s infinite ease-in-out;
+}
+.ai-dots span:nth-child(2){animation-delay:.2s;}
+.ai-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes aiDot{0%,80%,100%{transform:scale(.4);opacity:.4;}40%{transform:scale(1);opacity:1;}}
+.ai-rating{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 14px;border-top:1px solid rgba(137,87,229,.15);
+  font-size:0.62rem;color:var(--t3);font-family:Consolas,monospace;
+}
+.ai-rating-btn{
+  background:none;border:1px solid var(--border);border-radius:5px;
+  padding:2px 8px;cursor:pointer;font-size:0.72rem;color:var(--t3);transition:.15s;
+}
+.ai-rating-btn:hover{border-color:var(--purple);color:var(--purple);}
+.ai-rating-btn.rated-up{border-color:var(--green);color:var(--green);}
+.ai-rating-btn.rated-down{border-color:var(--red);color:var(--red);}
+.ai-settings-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+  z-index:1100;align-items:center;justify-content:center;padding:20px;
+}
+.ai-settings-overlay.show{display:flex;}
+.ai-settings-box{
+  background:var(--card);border:1px solid rgba(137,87,229,.5);
+  border-radius:var(--r);width:100%;max-width:440px;padding:22px;
+}
+.ai-settings-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bm);
+}
+.ai-settings-title{
+  font-family:Consolas,monospace;font-size:0.82rem;font-weight:700;
+  color:var(--purple);display:flex;align-items:center;gap:7px;
+}
+.ai-key-label{
+  font-size:0.68rem;color:var(--t3);font-family:Consolas,monospace;
+  margin-bottom:7px;display:block;
+}
+.ai-key-input{
+  width:100%;background:var(--elevated);border:1px solid var(--border);
+  border-radius:var(--rs);padding:10px 13px;color:var(--t1);
+  font-family:Consolas,monospace;font-size:0.76rem;
+  transition:.15s;letter-spacing:.5px;
+}
+.ai-key-input:focus{outline:none;border-color:var(--purple);background:var(--bm);}
+.ai-key-hint{
+  font-size:0.62rem;color:var(--t3);margin-top:7px;line-height:1.65;
+}
+.ai-key-hint a{color:var(--blue);text-decoration:none;}
+.ai-key-hint a:hover{text-decoration:underline;}
+.ai-settings-actions{display:flex;gap:8px;margin-top:16px;}
+.btn-ai-save{
+  flex:1;background:linear-gradient(135deg,var(--blue2),var(--purple2));
+  border:none;border-radius:var(--rs);padding:9px 12px;
+  color:#fff;font-family:'Noto Kufi Arabic',sans-serif;font-size:0.78rem;
+  font-weight:700;cursor:pointer;transition:.15s;
+}
+.btn-ai-save:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(137,87,229,.35);}
+.btn-ai-close-settings{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rs);padding:9px 14px;color:var(--t2);
+  font-family:'Noto Kufi Arabic',sans-serif;font-size:0.78rem;cursor:pointer;
+}
+.btn-ai-gear{
+  display:flex;align-items:center;gap:5px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--rs);
+  padding:7px 11px;cursor:pointer;font-size:0.72rem;color:var(--t2);
+  font-family:Consolas,monospace;transition:.18s;white-space:nowrap;
+}
+.btn-ai-gear:hover{border-color:var(--purple);color:var(--purple);}
+.btn-ai-gear.has-key{border-color:rgba(137,87,229,.4);color:var(--purple);}
+.ai-key-status{
+  display:flex;align-items:center;gap:6px;margin-top:10px;
+  font-size:0.65rem;font-family:Consolas,monospace;
+}
+.ai-key-status .dot-ok{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;}
+.ai-key-status .dot-no{width:7px;height:7px;border-radius:50%;background:var(--t3);display:inline-block;}
+.ai-keys-list{display:flex;flex-direction:column;gap:6px;margin:10px 0;}
+.ai-key-row{
+  display:flex;align-items:center;gap:8px;
+  background:var(--elevated);border:1px solid var(--border);
+  border-radius:var(--rs);padding:7px 10px;transition:.15s;
+}
+.ai-key-row.active-key{border-color:var(--purple);background:rgba(137,87,229,.08);}
+.ai-key-num{
+  font-family:Consolas,monospace;font-size:0.6rem;color:var(--t3);
+  min-width:18px;text-align:center;
+}
+.ai-key-row.active-key .ai-key-num{color:var(--purple);}
+.ai-key-val{
+  flex:1;background:transparent;border:none;color:var(--t2);
+  font-family:Consolas,monospace;font-size:0.72rem;outline:none;
+  letter-spacing:.3px;min-width:0;
+}
+.ai-key-val:focus{color:var(--t1);}
+.ai-key-row.active-key .ai-key-val{color:var(--t1);}
+.btn-key-activate{
+  background:none;border:1px solid var(--border);border-radius:5px;
+  padding:3px 8px;font-size:0.6rem;font-family:Consolas,monospace;
+  color:var(--t3);cursor:pointer;transition:.15s;white-space:nowrap;flex-shrink:0;
+}
+.btn-key-activate:hover{border-color:var(--purple);color:var(--purple);}
+.ai-key-row.active-key .btn-key-activate{
+  background:rgba(137,87,229,.2);border-color:var(--purple);color:var(--purple);
+}
+.btn-key-del{
+  background:none;border:none;color:var(--t3);cursor:pointer;
+  font-size:0.75rem;padding:2px 4px;border-radius:4px;transition:.12s;flex-shrink:0;
+}
+.btn-key-del:hover{color:var(--red);background:rgba(255,123,114,.1);}
+.btn-add-key{
+  display:flex;align-items:center;gap:6px;background:none;
+  border:1px dashed var(--border);border-radius:var(--rs);
+  padding:7px 12px;color:var(--t3);font-size:0.72rem;
+  cursor:pointer;font-family:'Noto Kufi Arabic',sans-serif;
+  width:100%;margin-top:2px;transition:.15s;
+}
+.btn-add-key:hover{border-color:var(--purple);color:var(--purple);}
+.prompt-editor-head{
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;padding:10px 14px;
+  background:rgba(137,87,229,.06);
+  border:1px solid rgba(137,87,229,.2);
+  border-radius:var(--rs);margin-top:14px;transition:.18s;
+}
+.prompt-editor-head:hover{background:rgba(137,87,229,.12);border-color:rgba(137,87,229,.4);}
+.prompt-editor-title{font-size:0.74rem;color:var(--purple);font-family:Consolas,monospace;display:flex;align-items:center;gap:6px;}
+.prompt-editor-chev{font-size:0.6rem;color:var(--t3);transition:.25s;}
+.prompt-editor-body{display:none;padding:10px 0 4px;}
+.prompt-editor-body.open{display:block;}
+.prompt-section-label{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:0.64rem;color:var(--blue);font-family:Consolas,monospace;
+  margin-bottom:4px;margin-top:10px;
+}
+.prompt-section-label:first-child{margin-top:0;}
+.btn-prompt-reset{
+  display:flex;align-items:center;gap:3px;
+  background:none;border:1px solid var(--border);border-radius:5px;
+  padding:2px 8px;color:var(--t3);font-size:0.65rem;cursor:pointer;
+  transition:.15s;font-family:'Noto Kufi Arabic',sans-serif;
+}
+.btn-prompt-reset:hover{border-color:var(--purple);color:var(--purple);}
+.btn-prompt-reset svg{transition:.3s;}
+.btn-prompt-reset:hover svg{transform:rotate(-180deg);}
+.prompt-textarea{
+  width:100%;background:var(--elevated);border:1px solid var(--border);
+  border-radius:var(--rs);padding:9px 11px;color:var(--t1);
+  font-family:'Noto Kufi Arabic',sans-serif;font-size:0.76rem;line-height:1.75;
+  resize:vertical;min-height:88px;outline:none;transition:.15s;
+  direction:rtl;text-align:right;
+}
+.prompt-textarea:focus{border-color:var(--purple);background:var(--bm);}
+.btn-prompt-save{
+  width:100%;margin-top:10px;
+  background:linear-gradient(135deg,var(--blue2),var(--purple2));
+  border:none;border-radius:var(--rs);padding:8px 12px;
+  color:#fff;font-family:'Noto Kufi Arabic',sans-serif;
+  font-size:0.76rem;font-weight:700;cursor:pointer;transition:.15s;
+}
+.btn-prompt-save:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(137,87,229,.3);}
+.prompt-vars-hint{font-size:0.58rem;color:var(--t3);font-family:Consolas,monospace;margin-top:2px;line-height:1.5;}
+.nct-toggle input:checked + .toggle-track{background:rgba(137,87,229,.2);border-color:var(--purple2);}
+.nct-toggle input:checked + .toggle-track .toggle-thumb{right:calc(100% - 16px);background:var(--purple);}
+.nct-toggle input:checked ~ .toggle-nct-lbl{color:var(--purple);}
+.edit-toggle input:checked + .toggle-track{background:rgba(255,166,87,.2);border-color:var(--orange);}
+.edit-toggle input:checked + .toggle-track .toggle-thumb{right:calc(100% - 16px);background:var(--orange);}
+.edit-toggle input:checked ~ .toggle-edit-lbl{color:var(--orange);}
+body.edit-mode .edit-toggle{background:rgba(255,166,87,.08)!important;}
+.ai-head-loader{display:none;align-items:center;margin-right:4px;}
+.ai-head-loader.visible{display:inline-flex;}
+.ai-head-loader span{
+  display:inline-block;width:5px;height:5px;border-radius:50%;
+  background:var(--purple);margin:0 2px;
+  animation:aiDot 1.2s infinite ease-in-out;
+}
+.ai-head-loader span:nth-child(2){animation-delay:.2s;}
+.ai-head-loader span:nth-child(3){animation-delay:.4s;}
+.del-confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:1000;align-items:center;justify-content:center;padding:20px;}
+.del-confirm-overlay.show{display:flex;}
+.del-confirm-box{background:var(--card);border:1px solid var(--red);border-radius:var(--r);padding:24px 22px;max-width:360px;width:100%;text-align:center;}
+.del-confirm-icon{font-size:2.2rem;margin-bottom:12px;}
+.del-confirm-title{font-size:0.92rem;font-weight:700;color:var(--t1);margin-bottom:8px;}
+.del-confirm-sub{font-size:0.74rem;color:var(--t2);margin-bottom:20px;line-height:1.65;}
+.del-confirm-actions{display:flex;gap:10px;justify-content:center;}
+.btn-del-confirm{background:var(--red);border:none;border-radius:var(--rs);padding:9px 22px;color:#fff;font-family:'Noto Kufi Arabic',sans-serif;font-size:0.8rem;font-weight:700;cursor:pointer;transition:.15s;}
+.btn-del-confirm:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(255,123,114,.35);}
+.btn-del-cancel{background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:9px 18px;color:var(--t2);font-family:'Noto Kufi Arabic',sans-serif;font-size:0.8rem;cursor:pointer;transition:.15s;}
+.btn-del-cancel:hover{border-color:var(--t2);color:var(--t1);}
+body.allow-copy-enabled, body.allow-copy-enabled * {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
+</style>
+</head>
+<body>
+<div id="loader">
+  <div class="loader-icon">🎓</div>
+  <div class="loader-text">جارٍ التحميل...</div>
+</div>
+<div class="wrap" id="appWrap" style="display:none;height:100%;">
+  <header>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;width:100%;">
+      <!-- زر استيراد (سهم لأسفل) — يظهر فقط عند تحميل ملف -->
+      <label class="btn-upload" id="btnImportJson" for="jsonFileInput" title="استيراد JSON" style="display:none;padding:6px;border-radius:50%;cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M8 7.293l2.146-2.147a.5.5 0 1 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 7.293V1a.5.5 0 0 1 1 0v6.293z"/></svg>
+      </label>
+      <div id="btnImportPlaceholder" style="width:30px;"></div>
+      <div class="logo" id="logoBtn" onclick="goHome()" title="العودة إلى الشاشة الرئيسية" style="cursor:pointer;">
+        <div class="logo-icon" id="logoIcon">🎓</div>
+        <div class="logo-text" id="logoText">Professional Quiz<small id="logoSub">حمّل ملف JSON للبدء</small></div>
+      </div>
+      <!-- زر تصدير (سهم لأعلى) — يظهر فقط عند تحميل ملف -->
+      <button class="btn-upload" id="btnDownloadJson" onclick="exportEditedJSON()" title="تصدير JSON" style="display:none;padding:6px;border-radius:50%;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+      </button>
+      <div id="btnDownloadPlaceholder" style="width:30px;"></div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap;justify-content:center;width:100%;overflow-x:auto;padding-bottom:4px;">
+      <button class="btn-ai-gear" id="btnAIGear" onclick="openAISettings()" title="الإعدادات" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:0 8px;height:28px;cursor:pointer;color:var(--t3);transition:.18s;display:flex;align-items:center;justify-content:center;box-sizing:border-box;margin:0;">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display:block;">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+      <button class="btn-ai-gear" id="btnSearchMode" onclick="toggleSearchMode()" title="بحث في الجلسة" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:0 10px;height:28px;cursor:pointer;font-size:0.8rem;color:var(--t2);transition:.18s;display:flex;align-items:center;justify-content:center;box-sizing:border-box;margin:0;">🔍</button>
+      <label class="shuffle-toggle" title="تبديل بين الترتيب العشوائي والمرتب" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:0 8px;height:28px;display:flex;align-items:center;gap:6px;cursor:pointer;box-sizing:border-box;margin:0;">
+        <input type="checkbox" id="shuffleCheck" onchange="onShuffleToggle()" style="display:none;">
+        <div class="toggle-track" style="width:30px;height:16px;margin:0;position:relative;"><div class="toggle-thumb" style="width:12px;height:12px;position:absolute;top:1px;"></div></div>
+        <span id="shuffleStatusLbl" style="font-size:0.65rem;font-family:Consolas,monospace;color:var(--t2);white-space:nowrap;margin:0;">مرتب 📋</span>
+      </label>
+      <label class="shuffle-toggle nct-toggle" title="إخفاء الخيارات عن الذكاء الاصطناعي" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:0 8px;height:28px;display:flex;align-items:center;gap:6px;cursor:pointer;box-sizing:border-box;margin:0;">
+        <input type="checkbox" id="hideChoicesToggle" onchange="toggleNCTText(this)" style="display:none;">
+        <div class="toggle-track" style="width:30px;height:16px;margin:0;position:relative;"><div class="toggle-thumb" style="width:12px;height:12px;position:absolute;top:1px;"></div></div>
+        <span class="toggle-nct-lbl" style="font-size:0.65rem;font-family:Consolas,monospace;color:var(--t3);white-space:nowrap;margin:0;">N.C.T.Ai</span>
+      </label>
+      <label class="shuffle-toggle edit-toggle" id="btnEditMode" title="وضع التعديل" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:0 8px;height:28px;display:flex;align-items:center;gap:6px;cursor:pointer;box-sizing:border-box;margin:0;">
+        <input type="checkbox" id="editModeCheck" onchange="toggleEditMode()" style="display:none;">
+        <div class="toggle-track" style="width:30px;height:16px;margin:0;position:relative;"><div class="toggle-thumb" style="width:12px;height:12px;position:absolute;top:1px;"></div></div>
+        <span class="toggle-edit-lbl" style="font-size:0.65rem;font-family:Consolas,monospace;color:var(--t3);white-space:nowrap;margin:0;">✏️ تعديل</span>
+      </label>
+      <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
+    </div>
+  </header>
+  <!-- RESUME BANNER -->
+  <div class="resume-banner" id="resumeBanner">
+    <div class="resume-info">
+      <strong>جلسة سابقة</strong>
+      <span id="resumeInfo">هل تريد المتابعة؟</span>
+    </div>
+    <div class="resume-actions">
+      <button class="btn-resume" onclick="showSessionsModal()">عرض الجلسات</button>
+      <button class="btn-discard" onclick="doDiscard()">بدء جديد</button>
+    </div>
+  </div>
+  <!-- SESSIONS MODAL -->
+  <div class="edit-overlay" id="sessionsModal" onclick="if(event.target===this)closeSessionsModal()" style="z-index:950;">
+    <div class="edit-modal">
+      <div class="edit-modal-head">
+        <div class="edit-modal-title">الجلسات المحفوظة</div>
+        <button class="btn-edit-close" onclick="closeSessionsModal()">✕ إغلاق</button>
+      </div>
+      <div id="sessionsList" style="display:flex;flex-direction:column;gap:10px;max-height:350px;overflow-y:auto;"></div>
+    </div>
+  </div>
+  <div class="tabs" id="tabsContainer" style="display:none;">
+    <div class="tab active" id="tabQuiz" onclick="showTab('quiz')">📝 الأسئلة</div>
+    <div class="tab hidden" id="tabNotes" onclick="showTab('notes')">📖 الملخص</div>
+  </div>
+  <!-- QUIZ TAB -->
+  <div class="tab-content active" id="tab-quiz">
+    <div class="empty" id="emptyDiv">
+      <span class="empty-icon">📂</span>
+      <div class="empty-title">لا توجد أسئلة محملة</div>
+      <div class="empty-desc">اضغط زر <b>تحميل JSON</b> في الأعلى واختر ملف بيانات الدرس<br><span style="font-size:0.7rem;color:var(--t3);">سيُحفظ الملف تلقائياً ويُسترد في زياراتك القادمة</span></div>
+      <label class="btn-upload" for="jsonFileInput" style="display:inline-flex;margin:0 auto;">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M8 7.293l2.146-2.147a.5.5 0 1 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 7.293V1a.5.5 0 0 1 1 0v6.293z"/></svg>
+        تحميل ملف JSON
+      </label>
+    </div>
+<!-- SEARCH MODE DIV -->
+<div id="searchModeDiv" style="display:none; flex-direction:column; flex:1; min-height:0; width:100%;">
+  <input type="text" id="searchInput" oninput="performSearch()" placeholder="🔍 ابحث عن أي سؤال في الجلسة الحالية..." style="width:100%; background:var(--elevated); border:1px solid var(--border); border-radius:var(--rs); padding:12px; color:var(--t1); font-family:'Noto Kufi Arabic',sans-serif; font-size:0.85rem; margin-bottom:12px; outline:none; transition:.2s;">
+  <!-- بطاقة السؤال التدريبي المنعزلة عن الجلسة -->
+  <div class="card" id="practiceCardDiv" style="display:none; margin-top:5px; flex:0;">
+     <div class="card-top" style="margin-bottom:12px;">
+        <div class="card-num" style="background:rgba(137,87,229,.2); color:var(--purple); border:1px solid rgba(137,87,229,.4);">🎯 سؤال تدريبي (لا يؤثر على النتيجة)</div>
+     </div>
+     <div class="q-text" id="pqText"></div>
+     <div class="choices" id="pChoicesDiv"></div>
+     <div class="rationale collapsed" id="pRationaleDiv" style="margin-top:12px;">
+        <div class="rationale-head" onclick="this.parentElement.classList.toggle('collapsed')">
+          <span>💡</span><span style="font-size:0.66rem;font-weight:700;">سبب الإجابة</span>
+          <span class="rationale-chevron">▼</span>
+        </div>
+        <div class="rationale-body" id="pRationaleText"></div>
+     </div>
+  </div>
+  <div id="searchResults" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;"></div>
+</div>
+    <div id="quizDiv" style="display:none;flex-direction:column;min-height:0;flex:1;">
+      <!-- تم نقل إعدادات الترتيب العشوائي للهيدر -->
+      <div class="pg-wrap">
+        <div class="pg-meta">
+          <span class="pg-label" id="pgLabel">0 / 0</span>
+          <div class="stat-row">
+            <div class="stat"><div class="dot ok"></div><span id="stOk">0</span></div>
+            <div class="stat"><div class="dot er"></div><span id="stEr">0</span></div>
+          </div>
+        </div>
+        <div class="bar-track"><div class="bar-fill" id="pgFill"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-top">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div class="card-num" id="cardNum">#1</div>
+            <button class="btn-copy-q" id="btnCopyQ" onclick="copyQuestion()" title="نسخ السؤال مع الخيارات" style="display:none;">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+              نسخ
+            </button>
+          </div>
+          <span class="card-source" id="cardSource" style="display:none;"></span>
+          <button id="btnEditQ" onclick="openEditModal()" title="تعديل هذا السؤال" style="display:none;background:none;border:1px solid var(--orange);border-radius:6px;padding:3px 9px;color:var(--orange);font-size:0.65rem;cursor:pointer;font-family:'Noto Kufi Arabic',sans-serif;gap:4px;align-items:center;">✏️ تعديل</button>
+        </div>
+        <div class="q-text" id="qText"></div>
+        <div class="q-note collapsed" id="qNote">
+          <div class="q-note-head" onclick="this.parentElement.classList.toggle('collapsed')">
+            <span>💡</span>
+            <span style="font-weight:700;">ملاحظة</span>
+            <span class="q-note-chevron">▼</span>
+          </div>
+          <div class="q-note-body" id="qNoteBody"></div>
+        </div>
+        <div class="choices" id="choicesDiv"></div>
+        <!-- ── RATIONALE BOX (shown after answering if q.r exists) ── -->
+        <div class="rationale" id="rationaleDiv">
+          <div class="rationale-head" onclick="toggleRationale()">
+            <span>💡</span>
+            <span style="font-size:0.66rem;font-weight:700;">سبب الإجابة</span>
+            <span class="rationale-chevron">▼</span>
+          </div>
+          <div class="rationale-body" id="rationaleText"></div>
+        </div>
+        <!-- ── AI TUTOR BUTTON & BOX ── -->
+        <button class="btn-ai-explain" id="btnAIExplain" onclick="requestAIExplanation()">
+          <span>🧠</span> شرح AI
+        </button>
+        <div class="ai-box" id="aiBox">
+          <div class="ai-box-head" onclick="toggleAIBox()">
+            <span>🤖</span>
+            <span class="ai-title" style="font-weight:700;">شرح من Ai</span>
+            <span class="ai-head-loader" id="aiHeadLoader"><span></span><span></span><span></span></span>
+            <span class="ai-badge">Gemini</span>
+            <button class="btn-ai-refresh" id="btnAIRefresh" onclick="event.stopPropagation();requestAIExplanation(true)" title="إعادة الشرح">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+            </button>
+            <span class="ai-chevron">▼</span>
+          </div>
+          <div class="ai-box-body" id="aiBoxBody"></div>
+          <div class="ai-rating" id="aiRating" style="display:none; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+  <div style="display:flex; align-items:center; gap:8px;">
+    <span>هل كان الشرح مفيداً؟</span>
+    <button class="ai-rating-btn" id="rateUp" onclick="rateAI('up')">👍</button>
+    <button class="ai-rating-btn" id="rateDown" onclick="rateAI('down')">👎</button>
+  </div>
+  <button id="btnApplyCorrection" onclick="applyAICorrection()" style="display:none; background:var(--purple); color:#fff; border:none; border-radius:4px; padding:4px 10px; font-size:0.65rem; cursor:pointer; font-family:inherit; font-weight:bold;">استبدال السؤال بالمصحح</button>
+</div>
+        </div>
+      </div>
+      <div class="nav">
+        <button class="btn-nav" id="btnPrev" disabled onclick="prev()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/></svg>
+          السابق
+        </button>
+        <span class="nav-idx" id="navIdx">1 / 1</span>
+        <button class="btn-nav btn-next" id="btnNext" disabled onclick="next()">
+          التالي
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/></svg>
+        </button>
+      </div>
+    </div>
+    <!-- RESULTS SCREEN -->
+    <div class="results" id="resDiv">
+      <svg class="ring" viewBox="0 0 100 100">
+        <circle class="tr" cx="50" cy="50" r="40"/>
+        <circle class="fi" id="ringFi" cx="50" cy="50" r="40"/>
+        <text class="ring-pct" id="ringPct" x="50" y="55" text-anchor="middle">0%</text>
+      </svg>
+      <div class="res-ttl">🎉 انتهى الاختبار!</div>
+      <div class="res-sub" id="resSub"></div>
+      <div class="res-grid">
+        <div class="res-box ok" onclick="toggleReview('ok')" title="اضغط للمراجعة">
+          <div class="res-num" id="resOk">0</div>
+          <div class="res-lbl">صحيح ✓</div>
+          <div class="res-hint">اضغط للمراجعة</div>
+        </div>
+        <div class="res-box er" onclick="toggleReview('er')" title="اضغط للمراجعة">
+          <div class="res-num" id="resEr">0</div>
+          <div class="res-lbl">خطأ ✗</div>
+          <div class="res-hint">اضغط للمراجعة</div>
+        </div>
+      </div>
+      <div class="review-panel" id="reviewEr">
+        <div class="review-title er">❌ الأسئلة التي أخطأت فيها</div>
+        <div id="reviewErList"></div>
+      </div>
+      <div class="review-panel" id="reviewOk">
+        <div class="review-title ok">✅ الأسئلة التي أجبت عليها صحيحاً</div>
+        <div id="reviewOkList"></div>
+      </div>
+      <div class="res-actions">
+        <button class="btn-restart" onclick="initQuiz()">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+          إعادة المحاولة
+        </button>
+        <button class="btn-restart" onclick="retryWrong()" id="btnRetryWrong" style="display:none;border-color:var(--red);color:var(--red);">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/></svg>
+          مراجعة الأخطاء فقط
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- NOTES TAB -->
+  <div class="tab-content" id="tab-notes">
+    <div id="notesContainer"></div>
+    <div style="height:16px;"></div>
+  </div>
+</div>
+<!-- EDIT MODAL -->
+<div class="edit-overlay" id="editOverlay" onclick="handleOverlayClick(event)">
+  <div class="edit-modal" id="editModal">
+    <div class="edit-modal-head">
+      <div class="edit-modal-title">✏️ تعديل السؤال <span id="editQNum" style="color:var(--t3);font-size:.7rem;"></span></div>
+      <button class="btn-edit-close" onclick="closeEditModal()">✕ إغلاق</button>
+    </div>
+    <label class="edit-field-label">📝 نص السؤال</label>
+    <textarea class="edit-textarea" id="editQText" rows="3" placeholder="اكتب نص السؤال هنا..."></textarea>
+    <label class="edit-field-label">🔘 الاختيارات <span style="color:var(--t3);font-size:.62rem;">(اختر الإجابة الصحيحة بالضغط على الدائرة)</span></label>
+    <div class="edit-choices-list" id="editChoicesList"></div>
+    <button class="edit-add-choice" onclick="addEditChoice()">＋ إضافة اختيار جديد</button>
+    <div class="edit-actions">
+      <button class="btn-edit-save" onclick="saveEditedQuestion()">💾 حفظ التعديلات</button>
+      <button class="btn-edit-export" onclick="saveAndExportJSON()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M8 7.293l2.146-2.147a.5.5 0 1 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 7.293V1a.5.5 0 0 1 1 0v6.293z"/></svg>
+        حفظ + تنزيل JSON
+      </button>
+      <button class="btn-edit-delete" onclick="confirmDeleteQuestion()">🗑️ حذف السؤال</button>
+    </div>
+  </div>
+</div>
+<!-- DELETE CONFIRM MODAL -->
+<div class="del-confirm-overlay" id="delConfirmOverlay">
+  <div class="del-confirm-box">
+    <div class="del-confirm-icon">🗑️</div>
+    <div class="del-confirm-title">حذف السؤال</div>
+    <div class="del-confirm-sub" id="delConfirmSub">هل أنت متأكد من حذف هذا السؤال وجميع اختياراته؟<br>لا يمكن التراجع عن هذا الإجراء.</div>
+    <div class="del-confirm-actions">
+      <button class="btn-del-confirm" onclick="executeDeleteQuestion()">نعم، احذف</button>
+      <button class="btn-del-cancel" onclick="closeDelConfirm()">إلغاء</button>
+    </div>
+  </div>
+</div>
+<!-- AI SETTINGS MODAL -->
+<div class="ai-settings-overlay" id="aiSettingsOverlay" onclick="if(event.target===this)closeAISettings()">
+  <div class="ai-settings-box">
+    <div class="ai-settings-head">
+      <div class="ai-settings-title">⚙️ الإعدادات</div>
+      <button class="btn-ai-close-settings" onclick="closeAISettings()">✕</button>
+    </div>
+  <!-- إضافة سويتش السماح بالنسخ -->
+  <div style="background:var(--elevated); border:1px solid var(--border); border-radius:var(--rs); padding:10px 14px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+    <span style="font-size:0.75rem; font-family:'Noto Kufi Arabic',sans-serif; color:var(--t1);">📄 السماح بالنسخ داخل الصفحة</span>
+    <label class="shuffle-toggle" style="margin:0; padding:0; border:none; background:transparent;">
+      <input type="checkbox" id="allowCopyToggle" onchange="toggleCopyStatus()">
+      <div class="toggle-track" style="width:36px;height:20px;"><div class="toggle-thumb" style="width:14px;height:14px;top:2px;right:2px;"></div></div>
+    </label>
+  </div>
+  <div style="background:var(--elevated); border:1px solid var(--border); border-radius:var(--rs); padding:10px 14px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+  <span style="font-size:0.75rem; font-family:'Noto Kufi Arabic',sans-serif; color:var(--t1);">🛠️ وضع التصحيح اللغوي للسؤال</span>
+  <label class="shuffle-toggle" style="margin:0; padding:0; border:none; background:transparent;">
+    <input type="checkbox" id="aiCorrectionToggle">
+    <div class="toggle-track" style="width:36px;height:20px;"><div class="toggle-thumb" style="width:14px;height:14px;top:2px;right:2px;"></div></div>
+  </label>
+</div>
+  <div class="ai-settings-title" style="margin-bottom:10px; font-size:0.75rem;">🤖 مفاتيح Gemini API</div>
+    <div class="ai-key-status" id="aiKeyStatus"></div>
+    <!-- قائمة المفاتيح -->
+    <div class="ai-keys-list" id="aiKeysList"></div>
+    <!-- زر إضافة مفتاح -->
+    <button class="btn-add-key" id="btnAddKey" onclick="addKeyRow()">＋ إضافة مفتاح جديد</button>
+    <div class="ai-key-hint" style="margin-top:10px;">
+      للحصول على مفتاح مجاني: اذهب إلى
+      <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>
+      ← اضغط <b>Create API Key</b>.
+      <br>يُحفظ في متصفحك فقط ولا يُرسل لأي جهة خارجية.
+    </div>
+    <!-- ── قسم تعديل البرومبتات ── -->
+    <div class="prompt-editor-head" id="promptEditorHead" onclick="togglePromptEditor()">
+      <div class="prompt-editor-title">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/></svg>
+        تعديل البرومبتات
+      </div>
+      <span class="prompt-editor-chev" id="promptEditorChev">▼</span>
+    </div>
+    <div class="prompt-editor-body" id="promptEditorBody">
+      <!-- التصحيح اللغوي -->
+      <div class="prompt-section-label">
+        🛠️ وضع التصحيح اللغوي
+        <button class="btn-prompt-reset" onclick="resetPromptToDefault('correction')" title="إعادة البرومبت الأصلي">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+          إعادة الأصلي
+        </button>
+      </div>
+      <div class="prompt-vars-hint">المتغيرات المتاحة: {QUESTION} {OPTIONS}</div>
+      <textarea class="prompt-textarea" id="promptTA_correction" rows="4"></textarea>
+      <!-- N.C.T.Ai -->
+      <div class="prompt-section-label">
+        🤖 شرح N.C.T.Ai
+        <button class="btn-prompt-reset" onclick="resetPromptToDefault('nct')" title="إعادة البرومبت الأصلي">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+          إعادة الأصلي
+        </button>
+      </div>
+      <div class="prompt-vars-hint">المتغيرات المتاحة: {QUESTION}</div>
+      <textarea class="prompt-textarea" id="promptTA_nct" rows="4"></textarea>
+      <!-- C.T.Ai -->
+      <div class="prompt-section-label">
+        🧠 شرح C.T.Ai
+        <button class="btn-prompt-reset" onclick="resetPromptToDefault('ct')" title="إعادة البرومبت الأصلي">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+          إعادة الأصلي
+        </button>
+      </div>
+      <div class="prompt-vars-hint">المتغيرات المتاحة: {QUESTION} {OPTIONS} {CORRECT_ANSWER}</div>
+      <textarea class="prompt-textarea" id="promptTA_ct" rows="4"></textarea>
+      <button class="btn-prompt-save" onclick="savePromptEdits()">💾 حفظ البرومبتات</button>
+    </div>
+    <div class="ai-settings-actions">
+      <button class="btn-ai-save" onclick="saveAllKeys()">💾 حفظ</button>
+      <button class="btn-ai-close-settings" onclick="closeAISettings()">إغلاق</button>
+    </div>
+  </div>
+</div>
+<div class="toast-wrap" id="toasts"></div>
+<script>
+let isCopyAllowed = false;
+document.addEventListener('contextmenu', e => { if(!isCopyAllowed) e.preventDefault(); });
+document.addEventListener('selectstart', e => { if(!isCopyAllowed) e.preventDefault(); });
+function toggleCopyStatus() {
+  isCopyAllowed = $('allowCopyToggle').checked;
+  if (isCopyAllowed) {
+    document.body.classList.add('allow-copy-enabled');
+    if($('btnCopyQ')) $('btnCopyQ').style.display = '';
+    toast('✅ تم تفعيل السماح بالنسخ', 'g');
+  } else {
+    document.body.classList.remove('allow-copy-enabled');
+    if($('btnCopyQ')) $('btnCopyQ').style.display = 'none';
+    toast('🚫 تم حظر النسخ وإعادته للوضع الطبيعي', 'r');
+  }
+}
+const DATA_FILE = 'data.json';
+const SAVE_KEY  = 'crescent_bio_state';
+const JSON_KEY  = 'crescent_bio_json';
+const AI_KEY_LS = 'crescent_gemini_key';
+let DATA     = null;
+let qs       = [], ci = 0, ok = 0, er = 0;
+let answered = false, revisit = false;
+let erLog    = [];
+let cache    = {};
+let aiCache  = {};  
+let shuffleEnabled = false;
+let currentSessionId = null; 
+const $ = id => document.getElementById(id);
+function onShuffleToggle() {
+  shuffleEnabled = $('shuffleCheck').checked;
+  const lbl = $('shuffleStatusLbl');
+  if (lbl) {
+    lbl.textContent = shuffleEnabled ? 'عشوائي 🔀' : 'مرتب 📋';
+  }
+  toast(shuffleEnabled ? '🔀 الترتيب العشوائي مفعّل' : '📋 الأسئلة بالترتيب الأصلي', '');
+}
+function toggleNCTText(checkbox) {
+  const lbl = document.querySelector('.toggle-nct-lbl');
+  if (lbl) {
+    lbl.textContent = checkbox.checked ? 'C.T.Ai' : 'N.C.T.Ai';
+  }
+}
+function boot() {
+  try {
+    const raw = localStorage.getItem(JSON_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const meta   = parsed.meta || {};
+      const label  = meta.subject || 'الملف المحفوظ';
+      loadData(parsed, false, label);
+      return;
+    }
+  } catch(e) {}
+  showApp();
+}
+function showApp() {
+  $('loader').style.display  = 'none';
+  $('appWrap').style.display = 'flex';
+}
+function loadData(parsed, fromUpload, autoLabel) {
+  if (parsed && parsed.mcq) {
+    parsed.mcq.forEach(q => {
+      if (!q._id) q._id = 'q_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    });
+  }
+  DATA = parsed;
+  const m = DATA.meta || {};
+  const titleText = m.subject || DATA.title || 'Professional Quiz';
+  document.title            = titleText + ' — Professional Quiz';
+  $('logoIcon').textContent  = m.icon || '🎓';
+  $('logoText').childNodes[0].textContent = titleText;
+  $('logoSub').textContent   = m.subtitle || m.subject_en || '';
+  buildNotes();
+  showApp();
+  if (fromUpload) {
+    try { localStorage.setItem(JSON_KEY, JSON.stringify(parsed)); } catch(e) {}
+    clearSession();
+    initQuiz();
+    return;
+  }
+  const saved = loadSession();
+  if (saved) showResumeBanner();
+  else initQuiz();
+}
+function updateEmptyDiv() {
+  if (!DATA) {
+    $('emptyDiv').innerHTML = `
+      <span class="empty-icon">📂</span>
+      <div class="empty-title">لا توجد أسئلة محملة</div>
+      <div class="empty-desc">اضغط زر <b>تحميل JSON</b> في الأعلى واختر ملف بيانات الدرس</div>
+      <label class="btn-upload" for="jsonFileInput" style="display:inline-flex;margin:0 auto;">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M8 7.293l2.146-2.147a.5.5 0 1 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 7.293V1a.5.5 0 0 1 1 0v6.293z"/></svg>
+        تحميل ملف JSON
+      </label>
+    `;
+  } else {
+    $('emptyDiv').innerHTML = `
+      <span class="empty-icon">📂</span>
+      <div class="empty-title">تغيير ملف JSON</div>
+      <div class="empty-desc">الملف الحالي: <b>${DATA.title || DATA.meta?.subject || 'محمل'}</b></div>
+      <div style="display:flex; flex-direction:column; gap:10px; align-items:center; justify-content:center; margin-top:10px;">
+        <label class="btn-upload" for="jsonFileInput" style="display:inline-flex;margin:0; width:fit-content;">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M8 7.293l2.146-2.147a.5.5 0 1 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 7.293V1a.5.5 0 0 1 1 0v6.293z"/></svg>
+          تحميل ملف JSON
+        </label>
+      </div>
+    `;
+  }
+}
+function goHome() {
+  if (inSearchMode) toggleSearchMode(); 
+  clearSession();
+  $('quizDiv').style.display = 'none';
+  $('resDiv').classList.remove('show');
+  $('reviewEr').classList.remove('show');
+  $('reviewOk').classList.remove('show');
+  const tabsContainer = $('tabsContainer');
+  if (tabsContainer) tabsContainer.style.display = 'none';
+  updateEmptyDiv();
+  $('emptyDiv').style.display = '';
+  if (DATA) {
+    if (loadSession()) {
+      showResumeBanner();
+    } else {
+      $('resumeBanner').classList.remove('show');
+    }
+  } else {
+    $('resumeBanner').classList.remove('show');
+  }
+  showTab('quiz');
+}
+$('jsonFileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      if (!parsed.mcq || !Array.isArray(parsed.mcq) || !parsed.mcq.length) {
+        toast('❌ الملف لا يحتوي على أسئلة (mcq فارغ أو غير موجود)', 'r');
+        return;
+      }
+      loadData(parsed, true, null);
+      toast('✅ تم تحميل ' + file.name + ' — ' + parsed.mcq.length + ' سؤال', 'g');
+    } catch(err) {
+      toast('❌ خطأ في قراءة الملف: تأكد أنه JSON صحيح', 'r');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+});
+function saveSession() {
+  if (!qs || qs.length === 0) return;
+  const sessionData = {
+    qs: qs, ci: ci, ok: ok, er: er,
+    erLog: erLog, cache: cache, aiCache: aiCache,
+    subject: DATA?.meta?.subject || 'بدون عنوان',
+    fullData: DATA
+  };
+  let sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
+  if (!currentSessionId) {
+    currentSessionId = 'sess_' + Date.now();
+    const dateStr = new Date().toLocaleDateString('ar-EG');
+    const timeStr = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+    sessions.push({ id: currentSessionId, name: `جلسة ${dateStr} - ${timeStr}`, data: sessionData });
+  } else {
+    const idx = sessions.findIndex(s => s.id === currentSessionId);
+    if (idx !== -1) sessions[idx].data = sessionData;
+  }
+  try { localStorage.setItem('crescent_bio_sessions', JSON.stringify(sessions)); } catch(e) {}
+}
+function loadSession() {
+  const sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
+  return sessions.length > 0 ? true : null;
+}
+function clearSession() {
+  currentSessionId = null;
+}
+function showResumeBanner() {
+  const sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
+  if (sessions.length === 0) {
+    $('resumeBanner').classList.remove('show');
+    return;
+  }
+  $('resumeInfo').textContent = 'لديك ' + sessions.length + ' جلسة محفوظة.';
+  $('resumeBanner').classList.add('show');
+}
+function doDiscard() {
+  currentSessionId = null;
+  $('resumeBanner').classList.remove('show');
+  initQuiz();
+}
+function showSessionsModal() {
+  const sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
+  const listDiv = $('sessionsList');
+  listDiv.innerHTML = '';
+  if (sessions.length === 0) {
+    listDiv.innerHTML = '<p style="text-align:center;color:var(--t3);padding:20px;">لا توجد جلسات محفوظة حالياً.</p>';
+  } else {
+    [...sessions].reverse().forEach(sess => {
+      const progress = sess.data.ci + 1;
+      const total = sess.data.qs.length;
+      const itemDiv = document.createElement('div');
+      itemDiv.style.cssText = 'background:var(--elevated);border:1px solid var(--border);border-radius:var(--rs);padding:12px;';
+      itemDiv.innerHTML = `
+        <div style="margin-bottom:12px;text-align:right;">
+          <div style="font-weight:bold;color:var(--blue);margin-bottom:5px;font-family:Consolas,monospace;">${sess.name}</div>
+          <div style="font-size:12px;color:var(--t2);">المادة: ${sess.data.subject} | التقدم: ${progress} من ${total}</div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn-nav" style="background:var(--green2);color:white;border:none;padding:6px 12px;" onclick="loadSpecificSession('${sess.id}')">استعادة</button>
+          <button class="btn-nav" style="padding:6px 12px;" onclick="restartSpecificSession('${sess.id}')">إعادة</button>
+          <button class="btn-nav" style="border-color:var(--red);color:var(--red);padding:6px 12px;" onclick="deleteSpecificSession('${sess.id}')">حذف</button>
+        </div>`;
+      listDiv.appendChild(itemDiv);
+    });
+  }
+  $('sessionsModal').classList.add('show');
+}
+function closeSessionsModal() {
+  $('sessionsModal').classList.remove('show');
+}
+function loadSpecificSession(sessionId) {
+  const sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
+  const sess = sessions.find(s => s.id === sessionId);
+  if (!sess) return;
+  currentSessionId = sess.id;
+  const data = sess.data;
+  qs = data.qs; ci = data.ci; ok = data.ok; er = data.er;
+  erLog = data.erLog || []; cache = data.cache || {}; aiCache = data.aiCache || {};
+  if (data.fullData) {
+    DATA = data.fullData;
+    try { localStorage.setItem(JSON_KEY, JSON.stringify(DATA)); } catch(e) {}
+    const m = DATA.meta || {};
+    const titleText = m.subject || DATA.title || 'Professional Quiz';
+    document.title = titleText + ' — Professional Quiz';
+    $('logoIcon').textContent = m.icon || '🎓';
+    $('logoText').childNodes[0].textContent = titleText;
+    $('logoSub').textContent = m.subtitle || m.subject_en || '';
+    buildNotes();
+  }
+  closeSessionsModal();
+  $('resumeBanner').classList.remove('show');
+  $('emptyDiv').style.display = 'none';
+  $('quizDiv').style.display = 'flex'; setHeaderBtns(true);
+  $('resDiv').classList.remove('show');
+  updateStats();
+  showQ();
+  toast('✅ تم استعادة الجلسة بنجاح', 'g');
+}
+function restartSpecificSession(sessionId) {
+  let sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
+  const sessIdx = sessions.findIndex(s => s.id === sessionId);
+  if (sessIdx !== -1) {
+    sessions[sessIdx].data.ci = 0; sessions[sessIdx].data.ok = 0;
+    sessions[sessIdx].data.er = 0; sessions[sessIdx].data.erLog = [];
+    sessions[sessIdx].data.cache = {}; sessions[sessIdx].data.aiCache = {};
+    try { localStorage.setItem('crescent_bio_sessions', JSON.stringify(sessions)); } catch(e) {}
+    loadSpecificSession(sessionId);
+    toast('🔄 تم البدء من جديد', 'g');
+  }
+}
+function deleteSpecificSession(sessionId) {
+  let sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
+  sessions = sessions.filter(s => s.id !== sessionId);
+  try { localStorage.setItem('crescent_bio_sessions', JSON.stringify(sessions)); } catch(e) {}
+  if (currentSessionId === sessionId) currentSessionId = null; 
+  if (sessions.length === 0) {
+    try { localStorage.removeItem(JSON_KEY); } catch(e) {} 
+    DATA = null;
+    $('resumeBanner').classList.remove('show');
+    closeSessionsModal();
+    $('quizDiv').style.display = 'none';
+    $('resDiv').classList.remove('show');
+    if ($('tabsContainer')) $('tabsContainer').style.display = 'none';
+    document.title = 'Professional Quiz';
+    $('logoIcon').textContent = '🎓';
+    $('logoText').childNodes[0].textContent = 'Professional Quiz';
+    $('logoSub').textContent = 'حمّل ملف JSON للبدء';
+    setHeaderBtns(false);
+    updateEmptyDiv();
+    $('emptyDiv').style.display = '';
+  } else {
+    showSessionsModal();
+    showResumeBanner();
+  }
+  toast('🗑️ تم حذف الجلسة', 'r');
+}
+function initQuiz() {
+  currentSessionId = null; 
+  if (!DATA || !DATA.mcq || !DATA.mcq.length) return;
+  qs = shuffleEnabled ? shuffle([...DATA.mcq]) : [...DATA.mcq];
+  ci = 0; ok = 0; er = 0; erLog = []; cache = {}; aiCache = {};
+  $('emptyDiv').style.display  = 'none';
+  $('quizDiv').style.display   = 'flex'; setHeaderBtns(true);
+  const tabsContainer = $('tabsContainer');
+  if (tabsContainer && DATA.notes && DATA.notes.length) {
+    tabsContainer.style.display = 'flex';
+  }
+  $('resDiv').classList.remove('show');
+  $('reviewEr').classList.remove('show');
+  $('reviewOk').classList.remove('show');
+  updateStats();
+  showQ();
+}
+function retryWrong() {
+  if (!erLog.length) return;
+  qs = shuffleEnabled ? shuffle(erLog.map(e => e.q)) : erLog.map(e => e.q);
+  ci = 0; ok = 0; er = 0; erLog = []; cache = {}; aiCache = {};
+  $('resDiv').classList.remove('show');
+  $('reviewEr').classList.remove('show');
+  $('reviewOk').classList.remove('show');
+  $('quizDiv').style.display = 'flex'; setHeaderBtns(true);
+  const tabsContainer = $('tabsContainer');
+  if (tabsContainer && DATA && DATA.notes && DATA.notes.length) {
+    tabsContainer.style.display = 'flex';
+  }
+  updateStats();
+  showQ();
+  clearSession();
+}
+function shuffle(a) { return a.sort(() => Math.random() - 0.5); }
+function showQ() {
+  answered = false;
+  const q = qs[ci];
+  $('cardNum').textContent = '#' + (ci + 1);
+  const srcEl = $('cardSource');
+  if (srcEl) {
+    if (q.exam) { srcEl.textContent = 'نموذج ' + q.exam; srcEl.style.display = 'inline'; }
+    else { srcEl.style.display = 'none'; }
+  }
+  $('pgLabel').textContent = (ci + 1) + ' / ' + qs.length;
+  $('navIdx').textContent  = (ci + 1) + ' / ' + qs.length;
+  $('pgFill').style.width  = (ci / qs.length * 100) + '%';
+  $('btnPrev').disabled    = ci === 0;
+  $('btnNext').disabled    = true;
+  $('qText').innerHTML     = q.q;
+  const noteEl = $('qNote');
+  const noteBody = $('qNoteBody');
+  const noteText = q.note || q.hint || q.info || q['ملاحظة'] || q['توضيح'];
+  if (noteText) {
+    noteBody.innerHTML = noteText;
+    noteEl.classList.add('show');
+    noteEl.classList.add('collapsed'); 
+  } else {
+    noteEl.classList.remove('show');
+    noteBody.innerHTML = '';
+  }
+  const ratDiv = $('rationaleDiv');
+  ratDiv.classList.remove('show');
+  $('rationaleText').textContent = '';
+  const aiBtn = $('btnAIExplain');
+  const aiBox = $('aiBox');
+  aiBtn.classList.remove('visible');
+  aiBox.classList.remove('show');
+  aiBox.classList.remove('collapsed');
+  $('aiRating').style.display = 'none';
+  const refreshBtn = $('btnAIRefresh');
+  if (refreshBtn) refreshBtn.style.display = 'none';
+  const cardEl = document.querySelector('.card');
+  if (cardEl) cardEl.classList.remove('ai-expanded');
+  resetAIRating();
+  const btnEQ = $('btnEditQ');
+  if (btnEQ) btnEQ.style.display = editMode ? 'inline-flex' : 'none';
+  const div = $('choicesDiv');
+  div.innerHTML = '';
+  if (!cache[ci]) {
+    cache[ci] = { shuffled: shuffle(q.o.map((o, i) => ({ text: o, correct: i === q.a }))) };
+  }
+  const opts = cache[ci].shuffled;
+  opts.forEach(opt => {
+    const b = document.createElement('button');
+    b.className   = 'choice';
+    b.textContent = opt.text;
+    b.addEventListener('click', () => handleAnswer(b, opt.correct, opts, q));
+    div.appendChild(b);
+  });
+  if (cache[ci].chosen !== undefined) {
+    answered = true;
+    applyUI(opts, cache[ci].chosen);
+    $('btnNext').disabled = false;
+    showRationale(q);
+    showAIBtn();
+    const hideChoices = $('hideChoicesToggle').checked;
+    const cacheKey = ci + (hideChoices ? '_hidden' : '_shown');
+    if (aiCache[cacheKey]) renderAIExplanation(aiCache[cacheKey]);
+  }
+}
+function handleAnswer(btn, correct, opts, q) {
+  if (answered) return;
+  answered = true;
+  const chosen = btn.textContent;
+  cache[ci].chosen  = chosen;
+  cache[ci].correct = correct;
+  if (!revisit) {
+    if (correct) ok++;
+    else { er++; erLog.push({ q: qs[ci], chosen }); }
+    updateStats();
+  }
+  applyUI(opts, chosen);
+  $('btnNext').disabled = false;
+  showRationale(q);
+  showAIBtn();
+  saveSession();
+}
+function showRationale(q) {
+  if (!q.r) return;
+  $('rationaleText').textContent = q.r;
+  $('rationaleDiv').classList.add('show', 'collapsed');
+}
+function applyUI(opts, chosen) {
+  document.querySelectorAll('.choice').forEach(b => {
+    b.disabled = true;
+    const isOk = opts.find(o => o.text === b.textContent)?.correct;
+    if (isOk)                                b.className = 'choice correct';
+    else if (b.textContent === chosen && !isOk) b.className = 'choice wrong';
+    else                                     b.className = 'choice dim';
+  });
+}
+function next() { revisit=false; ci++; if(ci>=qs.length){showRes();return;} showQ(); }
+function prev() { if(ci<=0)return; revisit=true; ci--; showQ(); }
+function updateStats() { $('stOk').textContent=ok; $('stEr').textContent=er; }
+function showRes() {
+  $('quizDiv').style.display = 'none';
+  $('resDiv').classList.add('show');
+  $('reviewEr').classList.remove('show');
+  $('reviewOk').classList.remove('show');
+  const tabsContainer = $('tabsContainer');
+  if (tabsContainer) tabsContainer.style.display = 'none';
+  const pct = Math.round(ok / qs.length * 100);
+  $('resOk').textContent   = ok;
+  $('resEr').textContent   = er;
+  $('ringPct').textContent = pct + '%';
+  $('pgFill').style.width  = '100%';
+  setTimeout(() => { $('ringFi').style.strokeDashoffset = 251 - (pct/100)*251; }, 100);
+  const fi = $('ringFi');
+  if (pct>=80) fi.style.stroke='var(--green)';
+  else if (pct>=50) fi.style.stroke='var(--blue)';
+  else fi.style.stroke='var(--orange)';
+  const msgs = [
+    '💪 راجع المادة من جديد',
+    '📚 تحتاج مراجعة أكثر',
+    '👍 جيد، راجع النقاط الضعيفة',
+    '⭐ رائع! أداء متميز',
+    '🏆 ممتاز! إتقان تام!'
+  ];
+  $('resSub').textContent = msgs[Math.min(4, Math.floor(pct/20))];
+  $('btnRetryWrong').style.display = erLog.length ? 'flex' : 'none';
+  buildReview();
+  clearSession();
+}
+function toggleReview(type) {
+  const panelEr = $('reviewEr');
+  const panelOk = $('reviewOk');
+  if (type === 'er') {
+    panelEr.classList.toggle('show');
+    panelOk.classList.remove('show');
+  } else {
+    panelOk.classList.toggle('show');
+    panelEr.classList.remove('show');
+  }
+}
+function buildReview() {
+  const erList = $('reviewErList');
+  const okList = $('reviewOkList');
+  erList.innerHTML = '';
+  okList.innerHTML = '';
+  Object.entries(cache).forEach(([idx, c]) => {
+    if (c.chosen === undefined) return;
+    const q    = qs[idx];
+    const item = document.createElement('div');
+    item.className = 'review-item';
+    const optsHTML = c.shuffled.map(o => {
+      let cls = 'review-opt';
+      if (o.correct)                            cls += ' correct';
+      else if (o.text === c.chosen && !o.correct) cls += ' chosen-wrong';
+      return `<div class="${cls}">${o.text}</div>`;
+    }).join('');
+    const ratHTML = q.r
+      ? `<div class="review-rationale"><div class="review-rationale-lbl">💡 سبب الإجابة</div>${q.r}</div>`
+      : '';
+    const noteText = q.note || q.hint || q.info || q['ملاحظة'] || q['توضيح'];
+    const noteHTML = noteText ? `<div style="font-size:0.7rem; color:var(--blue); margin-top:6px; padding:6px 8px; background:rgba(121,184,255,0.06); border-radius:4px; border:1px dashed rgba(121,184,255,0.25); text-align:right;">💡 <b>ملاحظة:</b> ${noteText}</div>` : '';
+    item.innerHTML = `
+      <div class="review-q">
+        <span>#${parseInt(idx)+1}</span>${q.q}
+        ${q.exam ? `<span style="margin-right:6px;font-size:.58rem;color:var(--t3);">${q.exam}</span>` : ''}
+        ${noteHTML}
+      </div>
+      <div class="review-opts">${optsHTML}</div>
+      ${ratHTML}`;
+    if (c.correct) okList.appendChild(item);
+    else           erList.appendChild(item);
+  });
+  if (!erList.children.length)
+    erList.innerHTML = '<div style="font-size:.76rem;color:var(--t3);padding:6px;">🎉 لا توجد أخطاء!</div>';
+  if (!okList.children.length)
+    okList.innerHTML = '<div style="font-size:.76rem;color:var(--t3);padding:6px;">لا توجد إجابات صحيحة بعد.</div>';
+}
+function buildNotes() {
+  const c = $('notesContainer');
+  const tabNotes = $('tabNotes');
+  const tabsContainer = $('tabsContainer'); 
+  c.innerHTML = '';
+  const notes = DATA.notes || [];
+  if (!notes.length) {
+    tabNotes.classList.add('hidden');
+    if (tabsContainer) tabsContainer.style.display = 'none';
+    return;
+  }
+  tabNotes.classList.remove('hidden');
+  if (tabsContainer) tabsContainer.style.display = 'flex';
+  notes.forEach((sec, idx) => {
+    const el = document.createElement('div');
+    el.className = 'notes-section' + (idx===0?' open':'');
+    let body = '';
+    if (sec.items) body = sec.items.map(item =>
+      `<div class="note-item ${item.color||'blue'}"><div class="note-text">${item.text}</div></div>`
+    ).join('');
+    if (sec.table) {
+      const ths  = sec.table.headers.map(h=>`<th>${h}</th>`).join('');
+      const rows = sec.table.rows.map(r=>`<tr>${r.map(cell=>`<td>${cell}</td>`).join('')}</tr>`).join('');
+      body += `<table class="kv-table"><tr>${ths}</tr>${rows}</table>`;
+    }
+    el.innerHTML=`
+      <div class="notes-head" onclick="this.closest('.notes-section').classList.toggle('open')">
+        <div class="notes-icon">${sec.icon||'📌'}</div>
+        <div class="notes-title">${sec.title}</div>
+        ${sec.tag?`<div class="notes-tag">${sec.tag}</div>`:''}
+        <span class="chevron">▼</span>
+      </div>
+      <div class="notes-body">${body}</div>`;
+    c.appendChild(el);
+  });
+}
+function showTab(t) {
+  document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('active',['quiz','notes'][i]===t));
+  document.querySelectorAll('.tab-content').forEach((c,i) => c.classList.toggle('active',['tab-quiz','tab-notes'][i]==='tab-'+t));
+}
+function toast(msg, type) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type||'');
+  t.textContent = msg;
+  $('toasts').appendChild(t);
+  setTimeout(()=>{ t.classList.add('out'); setTimeout(()=>t.remove(),280); }, 2500);
+}
+let editMode = false;
+function toggleEditMode() {
+  if (!DATA) { 
+    toast('⚠️ حمّل ملف JSON أولاً', 'r');
+    const check = $('editModeCheck');
+    if (check) check.checked = false;
+    return;
+  }
+  editMode = $('editModeCheck').checked;
+  document.body.classList.toggle('edit-mode', editMode);
+  const lbl = $('btnEditMode');
+  if (lbl) lbl.classList.toggle('active', editMode);
+  const span = document.querySelector('.toggle-edit-lbl');
+  if (span) span.textContent = editMode ? '🚫 إيقاف' : '✏️ تعديل';
+  const btn = $('btnEditQ');
+  if (btn) btn.style.display = editMode ? 'inline-flex' : 'none';
+  toast(editMode ? '✏️ وضع التعديل مفعّل' : '🔒 تم إيقاف التعديل', editMode ? '' : '');
+}
+function openEditModal() {
+  if (!DATA || !qs.length) return;
+  const q = qs[ci];
+  $('editQNum').textContent = '— السؤال ' + (ci + 1);
+  $('editQText').value = q.q;
+  renderEditChoices(q);
+  $('editOverlay').classList.add('show');
+}
+function renderEditChoices(q) {
+  const list = $('editChoicesList');
+  list.innerHTML = '';
+  q.o.forEach((opt, i) => {
+    const isCorrect = i === q.a;
+    const row = document.createElement('div');
+    row.className = 'edit-choice-row' + (isCorrect ? ' is-correct' : '');
+    row.dataset.idx = i;
+    row.innerHTML = `
+      <label class="edit-correct-radio${isCorrect ? ' selected' : ''}">
+        <input type="radio" name="editCorrect" value="${i}" ${isCorrect ? 'checked' : ''} onchange="markCorrectChoice(${i})">
+        <span class="edit-correct-label">${isCorrect ? '✅ صح' : 'صح؟'}</span>
+      </label>
+      <input class="edit-choice-input" type="text" value="${escHtml(opt)}" placeholder="نص الاختيار..." data-choice-idx="${i}">
+      <button class="edit-del-choice" onclick="removeEditChoice(${i})" title="حذف">🗑</button>`;
+    list.appendChild(row);
+  });
+}
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function markCorrectChoice(idx) {
+  document.querySelectorAll('.edit-choice-row').forEach((row, i) => {
+    const isThis = parseInt(row.dataset.idx) === idx;
+    row.classList.toggle('is-correct', isThis);
+    const lbl = row.querySelector('.edit-correct-label');
+    const radioLabel = row.querySelector('.edit-correct-radio');
+    if (lbl) lbl.textContent = isThis ? '✅ صح' : 'صح؟';
+    if (radioLabel) radioLabel.classList.toggle('selected', isThis);
+  });
+}
+function addEditChoice() {
+  const list = $('editChoicesList');
+  const idx = list.children.length;
+  const row = document.createElement('div');
+  row.className = 'edit-choice-row';
+  row.dataset.idx = idx;
+  row.innerHTML = `
+    <label class="edit-correct-radio">
+      <input type="radio" name="editCorrect" value="${idx}" onchange="markCorrectChoice(${idx})">
+      <span class="edit-correct-label">صح؟</span>
+    </label>
+    <input class="edit-choice-input" type="text" value="" placeholder="نص الاختيار الجديد..." data-choice-idx="${idx}">
+    <button class="edit-del-choice" onclick="removeEditChoice(${idx})" title="حذف">🗑</button>`;
+  list.appendChild(row);
+}
+function removeEditChoice(idx) {
+  const list = $('editChoicesList');
+  if (list.children.length <= 2) { toast('⚠️ لا يمكن حذف اكثر من هذا', 'r'); return; }
+  const rows = [...list.querySelectorAll('.edit-choice-row')];
+  const target = rows.find(r => parseInt(r.dataset.idx) === idx);
+  if (target) target.remove();
+  reindexChoiceRows();
+}
+function reindexChoiceRows() {
+  const list = $('editChoicesList');
+  [...list.children].forEach((row, i) => {
+    row.dataset.idx = i;
+    const radio = row.querySelector('input[type=radio]');
+    if (radio) { radio.value = i; radio.setAttribute('onchange', `markCorrectChoice(${i})`); }
+    const del = row.querySelector('.edit-del-choice');
+    if (del) del.setAttribute('onclick', `removeEditChoice(${i})`);
+    const inp = row.querySelector('.edit-choice-input');
+    if (inp) inp.dataset.choiceIdx = i;
+  });
+}
+function saveEditedQuestion() {
+  const newQText = $('editQText').value.trim();
+  if (!newQText) { toast('⚠️ نص السؤال لا يمكن أن يكون فارغاً', 'r'); return false; }
+  const rows = [...$('editChoicesList').children];
+  if (rows.length < 2) { toast('⚠️ يجب أن يكون هناك اختياران على الأقل', 'r'); return false; }
+  const checkedRadio = $('editChoicesList').querySelector('input[type=radio]:checked');
+  if (!checkedRadio) { toast('⚠️ يجب تحديد الإجابة الصحيحة', 'r'); return false; }
+  const correctIdx = parseInt(checkedRadio.value);
+  const newOptions = rows.map(row => row.querySelector('.edit-choice-input').value.trim());
+  if (newOptions.some(o => !o)) { toast('⚠️ لا يمكن ترك اختيار فارغاً', 'r'); return false; }
+  const origQ = qs[ci];
+  const mcqIdx = DATA.mcq.findIndex(q => q._id === origQ._id);
+  origQ.q = newQText;
+  origQ.o = newOptions;
+  origQ.a = correctIdx;
+  if (mcqIdx !== -1) DATA.mcq[mcqIdx] = origQ;
+  try { localStorage.setItem(JSON_KEY, JSON.stringify(DATA)); } catch(e) {}
+  if (cache[ci] && cache[ci].chosen !== undefined) {
+    if (cache[ci].correct) ok--;
+    else { er--; erLog = erLog.filter(log => log.q._id !== origQ._id); }
+    updateStats();
+  }
+  delete cache[ci];
+  delete aiCache[ci + '_hidden'];
+  delete aiCache[ci + '_shown'];
+  saveSession();
+  closeEditModal();
+  showQ();
+  toast('✅ تم حفظ التعديلات بنجاح', 'g');
+  return true;
+}
+function exportEditedJSON() {
+  if (!DATA) return;
+  const exportData = JSON.parse(JSON.stringify(DATA));
+  exportData.mcq.forEach(q => delete q._id);
+  const json = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = (DATA.meta?.subject || 'quiz') + '_edited.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('📥 تم تنزيل الملف المعدّل', 'g');
+}
+function saveAndExportJSON() {
+  if (!saveEditedQuestion()) return; 
+  exportEditedJSON();
+}
+function closeEditModal() {
+  $('editOverlay').classList.remove('show');
+}
+function handleOverlayClick(e) {
+  if (e.target === $('editOverlay')) closeEditModal();
+}
+function confirmDeleteQuestion() {
+  const num = ci + 1;
+  $('delConfirmSub').innerHTML =
+    'هل أنت متأكد من حذف السؤال <b style="color:var(--orange);">#' + num + '</b> وجميع اختياراته؟<br>' +
+    '<span style="color:var(--t3);font-size:.68rem;">لا يمكن التراجع عن هذا الإجراء.</span>';
+  $('delConfirmOverlay').classList.add('show');
+}
+function closeDelConfirm() {
+  $('delConfirmOverlay').classList.remove('show');
+}
+function executeDeleteQuestion() {
+  if (!DATA || !qs.length) return;
+  const origQ  = qs[ci];
+  if (cache[ci] && cache[ci].chosen !== undefined) {
+    if (cache[ci].correct) ok--;
+    else { er--; erLog = erLog.filter(log => log.q._id !== origQ._id); }
+    updateStats();
+  }
+  const mcqIdx = DATA.mcq.findIndex(q => q._id === origQ._id);
+  if (mcqIdx !== -1) DATA.mcq.splice(mcqIdx, 1);
+  qs.splice(ci, 1);
+  const newCache = {};
+  Object.keys(cache).forEach(k => {
+    const num = parseInt(k);
+    if (num < ci) newCache[num] = cache[num];
+    else if (num > ci) newCache[num - 1] = cache[num];
+  });
+  cache = newCache;
+  aiCache = {}; 
+  try { localStorage.setItem(JSON_KEY, JSON.stringify(DATA)); } catch(e) {}
+  saveSession(); 
+  closeDelConfirm();
+  closeEditModal();
+  if (!qs.length) {
+    $('quizDiv').style.display = 'none';
+    $('resDiv').classList.remove('show');
+    $('emptyDiv').style.display = '';
+    setHeaderBtns(false);
+    toast('🗑️ تم حذف السؤال — لا توجد أسئلة متبقية', 'r');
+    return;
+  }
+  if (ci >= qs.length) ci = qs.length - 1;
+  updateStats();
+  showQ();
+  toast('🗑️ تم حذف السؤال بنجاح', 'r');
+}
+function copyQuestion() {
+  if (!qs.length) return;
+  const q = qs[ci];
+  const labels = ['أ', 'ب', 'ج', 'د', 'هـ', 'و'];
+  let text = q.q.trim() + ':\n';
+  q.o.forEach((opt, i) => {
+    text += (labels[i] || (i + 1)) + '- ' + opt.trim() + '\n';
+  });
+  text = text.trimEnd();
+  function onSuccess() {
+    const btn = $('btnCopyQ');
+    btn.classList.add('copied');
+    btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg> تم النسخ`;
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg> نسخ`;
+    }, 2000);
+    toast('📋 تم نسخ السؤال', 'g');
+  }
+  function fallbackCopy() {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (ok) { onSuccess(); }
+    else { toast('⚠️ تعذّر النسخ — المتصفح لا يدعمه', 'r'); }
+  }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(onSuccess).catch(fallbackCopy);
+  } else {
+    fallbackCopy();
+  }
+}
+const AI_PROMPTS_LS = 'crescent_ai_prompts';
+const _TK = String.fromCharCode(96);
+const DEFAULT_PROMPTS = {
+  correction: 'أنت معلم ومصحح لغوي. عدل السؤال التالي املائيا ولغويا ثم اجب واعده مع الخيارات.\n' +
+    'هام جداً للاستبدال البرمجي: يجب أن تُرجع السؤال المصحح والخيارات بصيغة JSON داخل كود بلوك (json) كالتالي تماماً:\n' +
+    _TK + _TK + _TK + 'json\n' +
+    '{ "q": "السؤال المصحح هنا", "o": ["خيار1", "خيار2", "خيار3", "خيار4"] }\n' +
+    _TK + _TK + _TK + '\n' +
+    'ثم قدم شرحك للإجابة أسفل الـ JSON.\n\n' +
+    'السؤال الأصلي: {QUESTION}\nالخيارات:\n{OPTIONS}',
+  nct: 'أنت معلم وخبير أكاديمي متخصص في موضوع هذا السؤال. أجب على السؤال التالي واشرح الإجابة بالعربية الفصحى البسيطة وبإيجاز.\n\n' +
+    'السؤال: {QUESTION}\n\n' +
+    'المطلوب:\n' +
+    '1. اذكر الإجابة الصحيحة المباشرة.\n' +
+    '2. اشرح السبب علمياً بشكل مبسط.\n' +
+    '- اكتب بأسلوب مباشر ومختصر.\n' +
+    '- لا تستخدم رموز Markdown مثل ** أو ## أو *.\n' +
+    '- لا تكرر كتابة السؤال.',
+  ct: 'أنت معلم وخبير أكاديمي متخصص في موضوع هذا السؤال. اشرح لي بالعربية الفصحى البسيطة وبإيجاز.\n\n' +
+    'السؤال: {QUESTION}\n\n' +
+    'الخيارات:\n{OPTIONS}\n\n' +
+    'الإجابة الصحيحة: {CORRECT_ANSWER}\n\n' +
+    'المطلوب:\n' +
+    '1. اشرح لماذا "{CORRECT_ANSWER}" هي الإجابة الصحيحة بجملتين أو ثلاث.\n' +
+    '2. وضّح لماذا كل خيار آخر غير صحيح بجملة واحدة لكل خيار.\n' +
+    '- اكتب بأسلوب مباشر ومختصر.\n' +
+    '- لا تستخدم رموز Markdown مثل ** أو ## أو *.\n' +
+    '- لا تكرر السؤال في إجابتك.'
+};
+function loadCustomPrompts() {
+  try { return JSON.parse(localStorage.getItem(AI_PROMPTS_LS)) || {}; } catch(e) { return {}; }
+}
+function saveCustomPrompts(obj) {
+  try { localStorage.setItem(AI_PROMPTS_LS, JSON.stringify(obj)); } catch(e) {}
+}
+function getCustomPrompt(type) {
+  const custom = loadCustomPrompts();
+  return (custom[type] !== undefined && custom[type] !== '') ? custom[type] : DEFAULT_PROMPTS[type];
+}
+function buildPrompt(type, vars) {
+  let p = getCustomPrompt(type);
+  if (vars.QUESTION !== undefined)       p = p.replace(/\{QUESTION\}/g, vars.QUESTION);
+  if (vars.OPTIONS !== undefined)        p = p.replace(/\{OPTIONS\}/g, vars.OPTIONS);
+  if (vars.CORRECT_ANSWER !== undefined) p = p.replace(/\{CORRECT_ANSWER\}/g, vars.CORRECT_ANSWER);
+  return p;
+}
+function resetPromptToDefault(type) {
+  const custom = loadCustomPrompts();
+  delete custom[type];
+  saveCustomPrompts(custom);
+  const ta = document.getElementById('promptTA_' + type);
+  if (ta) ta.value = DEFAULT_PROMPTS[type];
+  toast('↺ تم إعادة البرومبت إلى النص الأصلي', 'g');
+}
+function savePromptEdits() {
+  const custom = loadCustomPrompts();
+  ['correction', 'nct', 'ct'].forEach(function(type) {
+    const ta = document.getElementById('promptTA_' + type);
+    if (ta) {
+      if (ta.value.trim() && ta.value.trim() !== DEFAULT_PROMPTS[type]) {
+        custom[type] = ta.value;
+      } else {
+        delete custom[type];
+      }
+    }
+  });
+  saveCustomPrompts(custom);
+  toast('✅ تم حفظ البرومبتات بنجاح', 'g');
+}
+function togglePromptEditor() {
+  const body  = document.getElementById('promptEditorBody');
+  const chev  = document.getElementById('promptEditorChev');
+  if (!body) return;
+  const isOpen = body.classList.contains('open');
+  if (!isOpen) {
+    const custom = loadCustomPrompts();
+    ['correction', 'nct', 'ct'].forEach(function(type) {
+      const ta = document.getElementById('promptTA_' + type);
+      if (ta) ta.value = (custom[type] !== undefined && custom[type] !== '') ? custom[type] : DEFAULT_PROMPTS[type];
+    });
+  }
+  body.classList.toggle('open', !isOpen);
+  if (chev) chev.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+function showAIBtn() {
+  $('btnAIExplain').classList.add('visible');
+}
+function setHeaderBtns(visible) {
+  const show = visible ? 'flex' : 'none';
+  const ph   = visible ? 'none' : 'block';
+  const dl   = $('btnDownloadJson');  if (dl)  dl.style.display  = show;
+  const dlp  = $('btnDownloadPlaceholder'); if (dlp) dlp.style.display = ph;
+  const imp  = $('btnImportJson');    if (imp) imp.style.display  = show;
+  const impp = $('btnImportPlaceholder'); if (impp) impp.style.display = ph;
+}
+const AI_KEYS_LS  = 'crescent_gemini_keys';   
+const AI_ACTIVE_LS = 'crescent_gemini_active'; 
+function loadKeys() {
+  try { return JSON.parse(localStorage.getItem(AI_KEYS_LS)) || []; } catch(e) { return []; }
+}
+function saveKeys(arr) {
+  try { localStorage.setItem(AI_KEYS_LS, JSON.stringify(arr)); } catch(e) {}
+}
+function getActiveIdx() {
+  const v = parseInt(localStorage.getItem(AI_ACTIVE_LS));
+  return isNaN(v) ? 0 : v;
+}
+function setActiveIdx(i) {
+  try { localStorage.setItem(AI_ACTIVE_LS, i); } catch(e) {}
+}
+function getActiveKey() {
+  const old = localStorage.getItem(AI_KEY_LS);
+  if (old) {
+    const keys = loadKeys();
+    if (!keys.length) { saveKeys([{val:old}]); localStorage.removeItem(AI_KEY_LS); return old; }
+    localStorage.removeItem(AI_KEY_LS);
+  }
+  const keys = loadKeys();
+  const idx  = Math.min(getActiveIdx(), keys.length - 1);
+  return (keys[idx] && keys[idx].val) ? keys[idx].val : null;
+}
+function renderKeysList() {
+  const list = $('aiKeysList');
+  const keys = loadKeys();
+  const activeIdx = getActiveIdx();
+  list.innerHTML = '';
+  keys.forEach((k, i) => {
+    const row = document.createElement('div');
+    row.className = 'ai-key-row' + (i === activeIdx ? ' active-key' : '');
+    row.dataset.idx = i;
+    row.innerHTML = `
+      <span class="ai-key-num">${i + 1}</span>
+      <input class="ai-key-val" type="password" value="${k.val || ''}" placeholder="AIza..." data-ki="${i}">
+      <button class="btn-key-activate" onclick="activateKey(${i})">${i === activeIdx ? '✓ نشط' : 'تفعيل'}</button>
+      <button class="btn-key-del" onclick="deleteKey(${i})" title="حذف">🗑</button>`;
+    list.appendChild(row);
+  });
+  const addBtn = $('btnAddKey');
+  if (addBtn) addBtn.style.display = keys.length >= 10 ? 'none' : 'flex';
+  updateKeyStatus();
+}
+function activateKey(i) {
+  setActiveIdx(i);
+  renderKeysList();
+  toast('✅ تم تفعيل المفتاح ' + (i + 1), 'g');
+}
+function deleteKey(i) {
+  const keys = loadKeys();
+  keys.splice(i, 1);
+  saveKeys(keys);
+  let active = getActiveIdx();
+  if (active >= keys.length) { setActiveIdx(Math.max(0, keys.length - 1)); }
+  renderKeysList();
+  toast('🗑️ تم حذف المفتاح', 'r');
+}
+function addKeyRow() {
+  const keys = loadKeys();
+  if (keys.length >= 10) { toast('⚠️ الحد الأقصى 10 مفاتيح', 'r'); return; }
+  keys.push({val:''});
+  saveKeys(keys);
+  setActiveIdx(keys.length - 1);
+  renderKeysList();
+  setTimeout(() => {
+    const inputs = $('aiKeysList').querySelectorAll('.ai-key-val');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 50);
+}
+function saveAllKeys() {
+  const rows = $('aiKeysList').querySelectorAll('.ai-key-val');
+  const keys = [];
+  rows.forEach(inp => { keys.push({val: inp.value.trim()}); });
+  const activeIdx = getActiveIdx();
+  const activeVal = keys[activeIdx]?.val || '';
+  if (activeVal && !activeVal.startsWith('AIza')) {
+    toast('⚠️ المفتاح النشط يجب أن يبدأ بـ AIza', 'r'); return;
+  }
+  const filtered = keys.filter(k => k.val);
+  saveKeys(filtered);
+  if (getActiveIdx() >= filtered.length) setActiveIdx(0);
+  updateKeyStatus();
+  toast('✅ تم حفظ المفاتيح', 'g');
+  closeAISettings();
+}
+function openAISettings() {
+  renderKeysList();
+  $('aiSettingsOverlay').classList.add('show');
+}
+function closeAISettings() {
+  $('aiSettingsOverlay').classList.remove('show');
+}
+function updateKeyStatus(hasKey) {
+  const key = getActiveKey();
+  const has  = hasKey !== undefined ? hasKey : !!key;
+  const el   = $('aiKeyStatus');
+  if (!el) return;
+  const keys = loadKeys();
+  const activeIdx = getActiveIdx();
+  if (has) {
+    el.innerHTML = `<span class="dot-ok"></span> المفتاح ${activeIdx + 1} نشط — ${keys.length} مفتاح محفوظ`;
+    el.style.color = 'var(--green)';
+    $('btnAIGear') && $('btnAIGear').classList.add('has-key');
+  } else {
+    el.innerHTML = '<span class="dot-no"></span> لا يوجد مفتاح نشط';
+    el.style.color = 'var(--t3)';
+    $('btnAIGear') && $('btnAIGear').classList.remove('has-key');
+  }
+}
+function resetAIRating() {
+  const up = $('rateUp'), down = $('rateDown');
+  if (up) { up.classList.remove('rated-up','rated-down'); up.textContent='👍'; }
+  if (down) { down.classList.remove('rated-up','rated-down'); down.textContent='👎'; }
+}
+function rateAI(type) {
+  const up = $('rateUp'), down = $('rateDown');
+  if (type === 'up') {
+    up.classList.add('rated-up'); down.classList.remove('rated-down');
+    up.textContent = '👍 شكراً!';
+    toast('😊 سعيد أن الشرح أفاد!', 'g');
+  } else {
+    down.classList.add('rated-down'); up.classList.remove('rated-up');
+    down.textContent = '👎 آسف!';
+    toast('📝 سيتم تحسين الشروح مستقبلاً', '');
+  }
+}
+function mdToHtml(text) {
+  text = text.replace(/^#{1,3}\s+(.+)$/gm, '<span class="ai-section-title">$1</span>');
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  text = text.replace(/^[\-\*]\s+(.+)$/gm, '• $1');
+  text = text.replace(/\n\n/g, '<br><br>');
+  text = text.replace(/\n/g, '<br>');
+  return text;
+}
+function renderAIExplanation(text) {
+  const body = $('aiBoxBody');
+  body.innerHTML = mdToHtml(text);
+  const btnApply = document.getElementById('btnApplyCorrection');
+  if (btnApply) {
+    const isCorrectionMode = document.getElementById('aiCorrectionToggle') && document.getElementById('aiCorrectionToggle').checked;
+    btnApply.style.display = (isCorrectionMode && text.includes('```json')) ? 'block' : 'none';
+  }
+  const aiBox = $('aiBox');
+  aiBox.classList.add('show');
+  aiBox.classList.remove('collapsed');
+  document.querySelector('.card') && document.querySelector('.card').classList.add('ai-expanded');
+  $('aiRating').style.display = 'flex';
+  $('btnAIExplain').disabled = false;
+  $('btnAIExplain').innerHTML = '<span>🧠</span> شرح AI';
+  $('btnAIRefresh').style.display = 'flex';
+  const headLoader = $('aiHeadLoader');
+  if (headLoader) headLoader.classList.remove('visible');
+}
+function toggleAIBox() {
+  const aiBox = $('aiBox');
+  const card = document.querySelector('.card');
+  aiBox.classList.toggle('collapsed');
+  if (card) card.classList.toggle('ai-expanded', !aiBox.classList.contains('collapsed'));
+}
+function toggleRationale() {
+  $('rationaleDiv').classList.toggle('collapsed');
+}
+async function requestAIExplanation(force) {
+  const aiTitleEl = document.querySelector('.ai-title');
+  if (aiTitleEl) {
+    if ($('hideChoicesToggle') && $('hideChoicesToggle').checked) {
+      aiTitleEl.innerHTML = '<span>✨</span> C.T. Ai';
+    } else {
+      aiTitleEl.innerHTML = '<span>✨</span> N.C.T. Ai';
+    }
+  }
+  const key = getActiveKey();
+  if (!key) {
+    toast('⚠️ أضف مفتاح Gemini أولاً', 'r');
+    openAISettings();
+    return;
+  }
+  const hideChoices = $('hideChoicesToggle').checked;
+  const cacheKey = ci + (hideChoices ? '_hidden' : '_shown');
+  if (aiCache[cacheKey] && !force) {
+    $('btnAIExplain').classList.remove('visible');
+    renderAIExplanation(aiCache[cacheKey]);
+    return;
+  }
+  const q = qs[ci];
+  const correctText = q.o[q.a];
+  const opts        = q.o.map((o, i) => `${i + 1}. ${o}`).join('\n');
+  $('btnAIExplain').classList.remove('visible');
+  const btn = $('btnAIExplain');
+  btn.disabled = true;
+  btn.innerHTML = '<span>🧠</span> شرح AI';
+  const headLoader = $('aiHeadLoader');
+  if (headLoader) headLoader.classList.add('visible');
+  const body = $('aiBoxBody');
+  body.innerHTML = '<div class="ai-loading" style="padding:10px 14px;font-size:0.74rem;color:var(--t3);">جارٍ إعداد الشرح...</div>';
+  $('aiBox').classList.add('show');
+  $('aiRating').style.display = 'none';
+  resetAIRating();
+  let prompt = '';
+  const isCorrectionMode = document.getElementById('aiCorrectionToggle') && document.getElementById('aiCorrectionToggle').checked;
+  if (isCorrectionMode) {
+    prompt = buildPrompt('correction', { QUESTION: q.q, OPTIONS: opts });
+  } else if (!hideChoices) {
+    prompt = buildPrompt('nct', { QUESTION: q.q });
+  } else {
+    prompt = buildPrompt('ct', { QUESTION: q.q, OPTIONS: opts, CORRECT_ANSWER: correctText });
+  }
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 8192 } 
+        })
+      }
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err?.error?.message || 'خطأ من الخادم';
+      if (res.status === 400 && msg.includes('API_KEY')) {
+        body.innerHTML = '❌ المفتاح غير صحيح. تحقق منه في الإعدادات.';
+      } else if (res.status === 429) {
+        body.innerHTML = '⏳ تجاوزت الحد المجاني مؤقتاً. انتظر قليلاً وأعد المحاولة.';
+      } else {
+        body.innerHTML = `❌ خطأ: ${msg}`;
+      }
+      if (headLoader) headLoader.classList.remove('visible');
+      btn.disabled = false;
+      btn.innerHTML = '<span>🧠</span> شرح AI';
+      return;
+    }
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!text) { if (headLoader) headLoader.classList.remove('visible'); body.innerHTML = '⚠️ لم تصل إجابة من النموذج. حاول مرة أخرى.'; btn.disabled=false; btn.innerHTML='<span>🧠</span> شرح AI'; return; }
+    aiCache[cacheKey] = text;
+    renderAIExplanation(text);
+    toast('✅ تم إعداد الشرح', 'g');
+  } catch(e) {
+    const headLoader2 = $('aiHeadLoader');
+    if (headLoader2) headLoader2.classList.remove('visible');
+    body.innerHTML = '❌ تعذّر الاتصال. تحقق من اتصالك بالإنترنت.';
+    btn.disabled = false;
+    btn.innerHTML = '<span>🧠</span> شرح AI';
+  }
+}
+(function initAIGear() {
+  const key = getActiveKey();
+  if (key) $('btnAIGear') && $('btnAIGear').classList.add('has-key');
+})();
+boot();
+let inSearchMode = false;
+function toggleSearchMode() {
+  const btn = $('btnSearchMode');
+  const sDiv = $('searchModeDiv');
+  const qDiv = $('quizDiv');
+  if (!inSearchMode) {
+    if (!DATA || !DATA.mcq) { toast('⚠️ لا توجد بيانات للبحث، قم بتحميل ملف أولاً', 'r'); return; }
+    inSearchMode = true;
+    btn.innerHTML = '🔙 رجوع للجلسة';
+    btn.style.color = 'var(--red)';
+    btn.style.borderColor = 'rgba(255,123,114,.3)';
+    btn.style.background = 'rgba(255,123,114,.1)';
+    qDiv.style.display = 'none';
+    $('resDiv').classList.remove('show');
+    $('emptyDiv').style.display = 'none';
+    if($('tabsContainer')) $('tabsContainer').style.display = 'none';
+    sDiv.style.display = 'flex';
+    $('searchInput').value = '';
+    $('searchResults').innerHTML = '';
+    $('practiceCardDiv').style.display = 'none';
+    $('searchInput').focus();
+  } else {
+    inSearchMode = false;
+    btn.innerHTML = '🔍';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+    btn.style.background = '';
+    sDiv.style.display = 'none';
+    if (DATA) {
+        if(qs.length > 0 && ci < qs.length && !$('resDiv').classList.contains('show')) {
+           qDiv.style.display = 'flex'; 
+        } else if (ci >= qs.length) {
+           $('resDiv').classList.add('show'); 
+        }
+        if($('tabsContainer') && DATA.notes && DATA.notes.length) $('tabsContainer').style.display = 'flex';
+    } else {
+        $('emptyDiv').style.display = '';
+    }
+  }
+}
+function performSearch() {
+  const query = $('searchInput').value.toLowerCase().trim();
+  const resList = $('searchResults');
+  resList.innerHTML = '';
+  $('practiceCardDiv').style.display = 'none';
+  if (!query) return;
+  const results = DATA.mcq.filter(q => 
+    (q.q && q.q.toLowerCase().includes(query)) || 
+    (q.o && q.o.some(opt => opt.toLowerCase().includes(query)))
+  );
+  if (results.length === 0) {
+    resList.innerHTML = '<div style="text-align:center;color:var(--t3);padding:20px;font-size:0.8rem;">لا توجد نتائج مطابقة 😕</div>';
+    return;
+  }
+  results.forEach(q => {
+    const item = document.createElement('div');
+    item.className = 'review-item';
+    item.style.cursor = 'pointer';
+    item.style.transition = '0.2s';
+    item.onmouseover = () => item.style.borderColor = 'var(--blue)';
+    item.onmouseout = () => item.style.borderColor = 'var(--bm)';
+    item.innerHTML = `<div class="review-q" style="margin:0;">${q.q}</div>`;
+    item.onclick = () => renderPracticeQuestion(q);
+    resList.appendChild(item);
+  });
+}
+function renderPracticeQuestion(q) {
+  $('searchResults').innerHTML = ''; 
+  const pDiv = $('practiceCardDiv');
+  pDiv.style.display = 'flex';
+  $('pqText').innerHTML = q.q;
+  const cDiv = $('pChoicesDiv');
+  cDiv.innerHTML = '';
+  const opts = shuffle(q.o.map((o, i) => ({ text: o, correct: i === q.a })));
+  opts.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'choice';
+    b.textContent = opt.text;
+    b.onclick = function() {
+      if (cDiv.dataset.answered === 'true') return;
+      cDiv.dataset.answered = 'true';
+      [...cDiv.children].forEach(btn => {
+        btn.disabled = true;
+        const isOk = opts.find(o => o.text === btn.textContent).correct;
+        if (isOk) btn.className = 'choice correct';
+        else if (btn === b && !isOk) btn.className = 'choice wrong';
+        else btn.className = 'choice dim';
+      });
+      if (q.r) {
+        $('pRationaleDiv').classList.add('show');
+        $('pRationaleDiv').classList.remove('collapsed');
+        $('pRationaleText').innerHTML = q.r;
+      } else {
+        $('pRationaleDiv').classList.remove('show');
+      }
+    };
+    cDiv.appendChild(b);
+  });
+  cDiv.dataset.answered = 'false';
+  $('pRationaleDiv').classList.remove('show');
+  $('pRationaleDiv').classList.add('collapsed');
+}
+function applyAICorrection() {
+  const hideToggle = document.getElementById('hideChoicesToggle');
+  const cacheKey = ci + (hideToggle && hideToggle.checked ? '_hidden' : '_shown');
+  const text = aiCache[cacheKey];
+  if (!text) return;
+  const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
+  if (jsonMatch && jsonMatch[1]) {
+    try {
+      const correctedData = JSON.parse(jsonMatch[1].trim());
+      if (correctedData.q && Array.isArray(correctedData.o)) {
+        const origO = [...qs[ci].o]; 
+        qs[ci].q = correctedData.q;
+        qs[ci].o = correctedData.o;
+        const origIdx = DATA.mcq.findIndex(q => q._id === qs[ci]._id);
+        if (origIdx !== -1) DATA.mcq[origIdx] = qs[ci];
+        if (cache[ci] && cache[ci].shuffled) {
+          qs[ci].o.forEach((newOpt, i) => {
+             const oldOpt = origO[i];
+             const cachedOpt = cache[ci].shuffled.find(co => co.text === oldOpt);
+             if (cachedOpt) cachedOpt.text = newOpt;
+             if (cache[ci].chosen === oldOpt) cache[ci].chosen = newOpt;
+          });
+        }
+        try { localStorage.setItem(JSON_KEY, JSON.stringify(DATA)); } catch(e) {}
+        saveSession();
+        const qTextEl = document.getElementById('qText');
+        if (qTextEl) qTextEl.innerHTML = qs[ci].q;
+        const div = document.getElementById('choicesDiv');
+        if (div) {
+          div.innerHTML = '';
+          const currentOpts = cache[ci] ? cache[ci].shuffled : qs[ci].o.map((o,i)=>({text:o, correct: i===qs[ci].a}));
+          currentOpts.forEach(opt => {
+            const b = document.createElement('button');
+            b.className = 'choice';
+            b.textContent = opt.text;
+            b.onclick = () => handleAnswer(b, opt.correct, currentOpts, qs[ci]);
+            div.appendChild(b);
+          });
+          if (cache[ci] && cache[ci].chosen !== undefined) {
+             applyUI(currentOpts, cache[ci].chosen);
+          }
+        }
+        toast('✅ تم استبدال السؤال بنجاح', 'g');
+        document.getElementById('btnApplyCorrection').style.display = 'none';
+        return;
+      }
+    } catch(e) {
+      console.error(e);
+    }
+  }
+  toast('❌ فشل الاستبدال: لم يتم العثور على صيغة JSON', 'r');
+}
+</script>
+</body>
+</html>
