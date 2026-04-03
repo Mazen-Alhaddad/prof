@@ -1,17 +1,33 @@
-// ====================================================\n//  Prof Quiz — Service Worker (V2)\n// ====================================================
-
-const CACHE_NAME = 'prof-quiz-v2'; // تم تغيير الإصدار لإجبار المتصفح على مسح الكاش القديم
-
-// أزلنا './' لأنها تسبب فشل العملية في بعض الاستضافات (مثل Cloudflare/GitHub)
-const FILES_TO_CACHE = [
-  './index.html',
-  './grammar.html',
-  './vocab.html',
-  './bio.html'
+const CACHE_NAME = 'prof-quiz-v3'; // تغيير الاسم لكسر الكاش القديم
+const ASSETS = [
+  'index.html',
+  'grammar.html',
+  'vocab.html',
+  'bio.html'
 ];
 
-// ── التثبيت: حفظ جميع الملفات الأساسية ──────────────
-self.addEventListener('install', event => {
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.map(key => key !== CACHE_NAME ? caches.delete(key) : null)
+    ))
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', e => {
+  e.respondWith(
+    caches.match(e.request).then(res => res || fetch(e.request))
+  );
+});
+ {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       console.log('[SW] Caching app shell');
