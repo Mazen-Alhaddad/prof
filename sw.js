@@ -1,58 +1,62 @@
-// ====================================================
-//  Prof Quiz — Service Worker
-//  يخزّن جميع ملفات التطبيق في الكاش ويشغّلها offline
-// ====================================================
+// ====================================================\n//  Prof Quiz — Service Worker (V2)\n// ====================================================
 
-const CACHE_NAME = 'prof-quiz-v1';
+const CACHE_NAME = 'prof-quiz-v2'; // تم تغيير الإصدار لإجبار المتصفح على مسح الكاش القديم
 
-// جميع الملفات التي يجب تخزينها
+// أزلنا './' لأنها تسبب فشل العملية في بعض الاستضافات (مثل Cloudflare/GitHub)
 const FILES_TO_CACHE = [
-  './',
   './index.html',
   './grammar.html',
   './vocab.html',
   './bio.html'
 ];
 
-// ── التثبيت: حفظ جميع الملفات في الكاش ──────────────
+// ── التثبيت: حفظ جميع الملفات الأساسية ──────────────
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
+      console.log('[SW] Caching app shell');
       return cache.addAll(FILES_TO_CACHE);
-    })
+    }).catch(err => console.error('[SW] Cache AddAll Failed:', err))
   );
-  // تفعيل فوري بدون انتظار إغلاق التبويبات القديمة
   self.skipWaiting();
 });
 
-// ── التفعيل: حذف الكاش القديم إن وُجد ───────────────
+// ── التفعيل: حذف الكاش القديم ───────────────
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keyList =>
       Promise.all(
-        keyList
-          .filter(key => key !== CACHE_NAME)
-          .map(key => caches.delete(key))
+        keyList.map(key => {
+          if (key !== CACHE_NAME) {
+            console.log('[SW] Removing old cache', key);
+            return caches.delete(key);
+          }
+        })
       )
     )
   );
-  // السيطرة على جميع الصفحات المفتوحة فوراً
   self.clients.claim();
 });
 
-// ── الاعتراض: الكاش أولاً، ثم الشبكة كاحتياط ────────
+// ── الاعتراض: الكاش أولاً، ثم الشبكة ────────
 self.addEventListener('fetch', event => {
-  // تجاهل الطلبات غير GET وطلبات الـ chrome-extension
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
 
+  // توجيه طلبات المسار الرئيسي (Root) إلى index.html حتى يعمل الأوفلاين
+  let requestToMatch = event.request;
+  const url = new URL(event.request.url);
+  if (url.pathname === '/' || url.pathname.endsWith('/')) {
+    requestToMatch = new Request('./index.html');
+  }
+
   event.respondWith(
-    caches.match(event.request).then(cachedResponse => {
+    caches.match(requestToMatch, { ignoreSearch: true }).then(cachedResponse => {
       if (cachedResponse) {
-        // الملف موجود في الكاش → أرجعه فوراً (بدون إنترنت)
-        return cachedResponse;
+        return cachedResponse; // إرجاع الملف من الكاش
       }
-      // غير موجود → حاول من الشبكة وخزّنه
+
+      // غير موجود بالـ Cache → جلبه من الإنترنت وتخزينه تلقائياً للمستقبل
       return fetch(event.request).then(networkResponse => {
         if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();
@@ -61,9 +65,14 @@ self.addEventListener('fetch', event => {
           });
         }
         return networkResponse;
-      }).catch(() => {
-        // لا إنترنت ولا كاش → أرجع صفحة index كـ fallback
-        return caches.match('./index.html');
+      }).catch(error => {
+        // إذا كان المستخدم أوفلاين والملف غير مخزن
+        console.warn('[SW] Offline and file not in cache:', event.request.url);
+        // يمكنك إرجاعه للصفحة الرئيسية كحل بديل في حال طلب صفحة HTML
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html', { ignoreSearch: true });
+        }
+        throw error;
       });
     })
   );
