@@ -101,39 +101,7 @@ footer{
   font-family:Consolas,monospace;font-size:0.6rem;color:var(--t3);
   border-top:1px solid var(--bm);margin-top:auto;
 }
-#overlay{
-  display:none;
-  position:fixed;inset:0;
-  background:var(--bg);
-  z-index:1000;
-  flex-direction:column;
-}
-#overlay.active{display:flex;}
-.overlay-bar{
-  display:flex;align-items:center;
-  padding:10px 14px;gap:10px;
-  background:var(--surface);
-  border-bottom:1px solid var(--border);
-  flex-shrink:0;
-}
-.btn-back{
-  display:flex;align-items:center;gap:7px;
-  background:none;border:1px solid var(--border);
-  border-radius:var(--rs);padding:7px 13px;
-  color:var(--t2);font-family:Consolas,monospace;font-size:0.75rem;
-  cursor:pointer;transition:.18s;
-}
-.btn-back:hover{border-color:var(--purple);color:var(--purple);}
-.overlay-title{
-  font-family:Consolas,monospace;font-size:0.8rem;
-  font-weight:700;color:var(--t1);flex:1;text-align:center;
-}
-.overlay-spacer{width:86px;}
-#appContainer{
-  flex:1;overflow:auto;width:100%;
-  background:var(--bg);
-  position:relative;
-}
+
 </style>
 <script>
 const appManifest = {
@@ -210,74 +178,25 @@ document.head.appendChild(manifestLink);
 </div>
 <footer>Professional Quiz · powred by mazen Alhaddad © </footer>
 </div>
-<!-- FULLSCREEN OVERLAY -->
-<div id="overlay">
-  <div class="overlay-bar">
-    <button class="btn-back" onclick="closeApp()">
-      <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/></svg>
-      القائمة الرئيسية
-    </button>
-    <div class="overlay-title" id="overlayTitle"></div>
-    <div class="overlay-spacer"></div>
-  </div>
-  <div id="appStyles"></div>
-  <div id="appContainer"></div>
-</div>
+
 <script>
 const APPS = {
-  "bio": { title: "🔬 كيمياء + أحياء", url: "bio.html" },
-  "grammar": { title: "📝 قواعد اللغة", url: "grammar.html" },
-  "vocab": { title: "📚 مفردات اللغة", url: "vocab.html" }
+  "bio": { title: "🔬 كيمياء + أحياء", url: "./bio.html" },
+  "grammar": { title: "📝 قواعد اللغة", url: "./grammar.html" },
+  "vocab": { title: "📚 مفردات اللغة", url: "./vocab.html" }
 };
 
-async function openApp(appKey) {
+function openApp(appKey) {
   const app = APPS[appKey];
-  if (!app) return;
-
-  const appContainer = document.getElementById('appContainer');
-  const appStyles = document.getElementById('appStyles');
-  const overlay = document.getElementById('overlay');
-  const overlayTitle = document.getElementById('overlayTitle');
-
-  appContainer.innerHTML = "<div style='color:white;text-align:center;padding:50px;font-family:sans-serif;'>جاري تحميل الاختبار...</div>";
-  overlayTitle.textContent = app.title;
-  overlay.classList.add('active');
-
-  try {
-    const response = await fetch(app.url);
-    if (!response.ok) throw new Error('تعذر العثور على ملف الاختبار');
-    
-    const htmlText = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlText, 'text/html');
-
-    appStyles.innerHTML = '';
-    doc.querySelectorAll('style').forEach(s => appStyles.appendChild(s.cloneNode(true)));
-    appContainer.innerHTML = doc.body.innerHTML;
-
-    doc.querySelectorAll('script').forEach(oldScript => {
-      const newScript = document.createElement('script');
-      if (oldScript.src) {
-        newScript.src = oldScript.src;
-      } else {
-        newScript.textContent = oldScript.textContent;
-      }
-      appContainer.appendChild(newScript);
-    });
-
-    document.body.style.overflow = 'hidden';
-  } catch (error) {
-    console.error(error);
-    appContainer.innerHTML = "<div style='color:red;text-align:center;padding:50px;'>خطأ في تحميل الملف.</div>";
+  if (app && app.url) {
+    // الانتقال المباشر للملف في نفس التبويب
+    window.location.href = app.url;
+  } else {
+    console.error("الملف غير موجود في المسار المحدد");
   }
 }
 
-function closeApp() {
-  document.getElementById('overlay').classList.remove('active');
-  document.body.style.overflow = 'auto';
-  document.getElementById('appContainer').innerHTML = '';
-  document.getElementById('appStyles').innerHTML = '';
-}
+
 </script>
 
 </body>
