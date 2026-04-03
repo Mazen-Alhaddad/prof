@@ -1,11 +1,13 @@
-const CACHE_NAME = 'prof-quiz-v3'; // تغيير الاسم لكسر الكاش القديم
+const CACHE_NAME = 'prof-quiz-final-v1';
 const ASSETS = [
   'index.html',
   'grammar.html',
   'vocab.html',
-  'bio.html'
+  'bio.html',
+  'manifest.json'
 ];
 
+// تثبيت وحفظ كل الملفات
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
@@ -22,26 +24,24 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// الاستراتيجية: الكاش أولاً للسرعة القصوى في الأوفلاين
 self.addEventListener('fetch', e => {
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).catch(() => {
+        // إذا فشل الإنترنت، ابحث عن الصفحة المحددة في الكاش
+        const url = new URL(e.request.url);
+        return caches.match(url.pathname.split('/').pop() || 'index.html');
+      })
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then(res => res || fetch(e.request))
   );
 });
- {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('[SW] Caching app shell');
-      return cache.addAll(FILES_TO_CACHE);
-    }).catch(err => console.error('[SW] Cache AddAll Failed:', err))
-  );
-  self.skipWaiting();
-});
-
-// ── التفعيل: حذف الكاش القديم ───────────────
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keyList =>
-      Promise.all(
+ Promise.all(
         keyList.map(key => {
           if (key !== CACHE_NAME) {
             console.log('[SW] Removing old cache', key);

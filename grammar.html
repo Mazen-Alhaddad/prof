@@ -159,22 +159,19 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
 <div class="wrap">
   <header style="display:flex;flex-direction:column;align-items:center;padding:16px 0 12px;gap:12px;flex-shrink:0;width:100%;">
     <div style="display:flex;align-items:center;justify-content:center;gap:12px;width:100%;">
-      <label class="btn-upload" id="btnImportJson" for="fileInput" title="استيراد JSON" style="display:none;padding:6px;border-radius:50%;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M8 7.293l2.146-2.147a.5.5 0 1 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 7.293V1a.5.5 0 0 1 1 0v6.293z"/></svg></label>
-      <div id="btnImportPlaceholder" style="width:30px;"></div>
-      <div class="logo" id="logoBtn" style="cursor:pointer;">
+      <div class="logo" id="logoBtn" onclick="window.location.href='index.html'" title="العودة إلى الشاشة الرئيسية" style="cursor:pointer;">
         <div class="logo-icon">&#x1F4DD;</div>
         <div class="logo-text">Crescent Quiz<small>English Grammar Pro</small></div>
       </div>
-      <button class="btn-upload" id="btnDownloadJson" onclick="exportEditedJSON()" title="تصدير JSON" style="display:none;padding:6px;border-radius:50%;"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg></button>
-      <div id="btnDownloadPlaceholder" style="width:30px;"></div>
     </div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap;justify-content:center;width:100%;overflow-x:auto;padding-bottom:4px;">
       <button class="btn-search" id="btnSearchMode" onclick="toggleSearchMode()" title="بحث" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:0 10px;height:28px;cursor:pointer;font-size:0.8rem;color:var(--t2);transition:.18s;display:flex;align-items:center;justify-content:center;box-sizing:border-box;margin:0;">🔍</button>
-      <label class="shuffle-toggle" title="تبديل بين الترتيب العشوائي والمرتب" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:0 8px;height:28px;display:flex;align-items:center;gap:6px;cursor:pointer;box-sizing:border-box;margin:0;">
+      <label class="shuffle-toggle" title="ترتيب الأسئلة" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:0 8px;height:28px;display:flex;align-items:center;gap:6px;cursor:pointer;box-sizing:border-box;margin:0;">
         <input type="checkbox" id="shuffleCheck" onchange="onShuffleToggle()" style="display:none;">
         <div class="toggle-track" style="width:30px;height:16px;margin:0;position:relative;"><div class="toggle-thumb" style="width:12px;height:12px;position:absolute;top:1px;"></div></div>
         <span id="shuffleStatusLbl" style="font-size:0.65rem;font-family:Consolas,monospace;color:var(--t2);white-space:nowrap;margin:0;">مرتب 📋</span>
       </label>
+
       <label class="btn-upload" for="fileInput" title="تحميل ملف JSON" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:0 10px;height:28px;cursor:pointer;color:var(--t2);transition:.18s;display:flex;align-items:center;justify-content:center;box-sizing:border-box;margin:0;">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
       </label>
@@ -245,13 +242,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
       <div class="exp-list" id="expList"></div>
     </div>
   </div>
-  <div class="section" id="secTrans" style="display:none">
-    <div class="sec-head" onclick="tog('secTrans')">
-      <div class="sec-title">&#x62A;&#x631;&#x62C;&#x645;&#x629; <b>Translation</b></div>
-      <span class="chevron">&#9660;</span>
-    </div>
-    <div class="sec-body"><div class="trans-grid" id="transGrid"></div></div>
-  </div>
+
   </div>
   <div class="nav" id="navDiv" style="display:none">
     <button class="btn-nav" id="btnPrev" disabled>
@@ -307,7 +298,7 @@ function $(id){return document.getElementById(id);}
 function onShuffleToggle(){
   shuffleEnabled=$('shuffleCheck').checked;
   $('shuffleStatusLbl').textContent=shuffleEnabled?'عشوائي 🔀':'مرتب 📋';
-  toast(shuffleEnabled?'🔀 الترتيب العشوائي مفعّل':'📋 الأسئلة بالترتيب الأصلي','');
+  if(DATA_RAW){load(DATA_RAW);}
 }
 $('fileInput').addEventListener('change',function(e){
   var file=e.target.files[0]; if(!file)return;
@@ -320,7 +311,13 @@ $('fileInput').addEventListener('change',function(e){
       var d=JSON.parse(text);
       if(!Array.isArray(d)){toast('الملف يجب أن يكون مصفوفة [ ]','r');return;}
       if(!d.length){toast('الملف فارغ','r');return;}
-      d=d.filter(function(q){return q&&q.sentence;});
+      d=d.filter(function(q){return q&&(q.sentence||q.question||q.text||q.q);});
+      d=d.map(function(q){
+        if(!q.sentence){q.sentence=q.question||q.text||q.q||'';}
+        if(!q.options&&q.choices){q.options=q.choices;}
+        if(!q.answer&&q.correct){q.answer=q.correct;}
+        return q;
+      });
       if(!d.length){toast('لا توجد اسئلة صالحة في الملف','r');return;}
       load(d); toast('تم تحميل '+d.length+' سؤال','g');
     }catch(x){toast('خطأ في قراءة الملف: '+x.message,'r');}
@@ -356,7 +353,7 @@ function load(data){
   $('pgWrap').style.display='block';
   $('navDiv').style.display='flex';
   $('resDiv').classList.remove('show');
-  setHeaderBtns(true); updateStats();showQ();
+  updateStats();showQ();
 }
 function showQ(){
   var q=qs[ci]; if(!q)return;
@@ -371,7 +368,7 @@ function showQ(){
   $('navIdx').textContent=(ci+1)+' / '+qs.length;
   $('btnPrev').disabled=ci===0;
   $('btnNext').disabled=true;
-  renderSent(q);renderChoices(q);renderExp(q);renderTrans(q);
+  renderSent(q);renderChoices(q);renderExp(q);
   var c=cache[ci];
   if(c){answered=true;applyUI(q,c.chosen);$('btnNext').disabled=false;$('ttsRow').classList.add('show');}
 }
@@ -424,7 +421,7 @@ function showTip(el){
 }
 function renderChoices(q){
   var div=$('choicesDiv'); div.innerHTML='';
-  var opts = shuffleEnabled && !answered ? shuffle(q.options.slice()) : q.options;
+  var opts = shuffle(q.options.slice());
   opts.forEach(function(opt){
     var b=document.createElement('button');
     b.className='choice';b.textContent=opt;
@@ -481,19 +478,7 @@ function renderExp(q){
   if(how){var r2=document.createElement('div');r2.className='exp-row';r2.innerHTML='<span class="exp-icon">&#128269;</span><div class="exp-txt"><b>&#x643;&#x64A;&#x641; &#x639;&#x631;&#x641;&#x646;&#x627;&#x61F;</b> '+how+'</div>';div.appendChild(r2);}
   if(!why&&!how)div.innerHTML='<div class="exp-txt" style="color:var(--t3)">&#x644;&#x627; &#x64A;&#x648;&#x62C;&#x62F; &#x634;&#x631;&#x62D;.</div>';
 }
-function renderTrans(q){
-  var div=$('transGrid'); if(!div)return; div.innerHTML='';
-  var sec=$('secTrans'); if(sec) sec.style.display=q.words&&q.words.length?'':'none';
-  if(!q.words)return;
-  q.words.forEach(function(wd){
-    var isB=wd.w==='___';
-    var cell=document.createElement('div');
-    cell.className='trans-cell'+(isB?' ans':'');
-    var en=isB?q.answer:wd.w.replace(/[.,!?;:]$/,'');
-    cell.innerHTML='<div class="ten">'+en+'</div><div class="tar">'+wd.ar+'</div><div class="tpos">'+(POS[wd.pos]||wd.pos||'')+'</div>';
-    div.appendChild(cell);
-  });
-}
+
 function tog(id){$(id).classList.toggle('open');}
 function nextQ(){revisit=false;ci++;if(ci>=qs.length){showRes();return;}showQ();save();}
 function prevQ(){if(ci<=0)return;revisit=true;ci--;showQ();}
@@ -597,7 +582,7 @@ function performSearch(){
   var query=$('searchInput').value.toLowerCase().trim(), resList=$('searchResults');
   resList.innerHTML=''; $('practiceCardDiv').style.display='none';
   if(!query)return;
-  var results=DATA_RAW.filter(function(q){ return (q.sentence&&q.sentence.toLowerCase().includes(query))||(q.options&&q.options.some(function(o){return o.toLowerCase().includes(query)})); });
+  var results=DATA_RAW.filter(function(q){ return (q.sentence&&q.sentence.toLowerCase().includes(query))||(q.options&&q.options.some(function(o){return o.toLowerCase().includes(query)}))|| (q.rule&&q.rule.toLowerCase().includes(query))||(q.ruleAr&&q.ruleAr.includes(query)); });
   if(results.length===0){resList.innerHTML='<div style="text-align:center;color:var(--t3);">لا توجد نتائج مطابقة 😕</div>';return;}
   results.forEach(function(q){
     var item=document.createElement('div'); item.style.cssText='background:var(--elevated);padding:10px;border-radius:6px;cursor:pointer;border:1px solid var(--bm);';
@@ -667,14 +652,14 @@ function loadSpecificSession(sid){
   qs=d.qs; ci=d.ci; ok=d.ok; er=d.er; erItems=d.erItems||[]; ruleErr=d.ruleErr||{}; cache=d.cache||{}; DATA_RAW=d.DATA_RAW;
   closeSessionsModal(); $('resumeBanner').style.display='none'; $('emptyDiv').style.display='none';
   $('quizDiv').style.display='block'; $('pgWrap').style.display='block'; $('navDiv').style.display='flex';
-  setHeaderBtns(true); updateStats(); showQ(); toast('✅ تم الاستعادة','g');
+  updateStats(); showQ(); toast('✅ تم الاستعادة','g');
 }
 function deleteSpecificSession(sid){
   var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
   sessions=sessions.filter(function(s){return s.id!==sid;});
   try{localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions));}catch(e){}
   if(currentSessionId===sid) currentSessionId=null;
-  if(sessions.length===0){ $('resumeBanner').style.display='none'; closeSessionsModal(); $('quizDiv').style.display='none'; $('emptyDiv').style.display='block'; DATA_RAW=null; qs=[]; setHeaderBtns(false); }
+  if(sessions.length===0){ $('resumeBanner').style.display='none'; closeSessionsModal(); $('quizDiv').style.display='none'; $('emptyDiv').style.display='block'; DATA_RAW=null; qs=[]; }
   else{ showSessionsModal(); }
   toast('🗑️ تم حذف الجلسة','r');
 }
@@ -686,20 +671,8 @@ function restartSpecificSession(sid){
   try{localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions));}catch(e){}
   loadSpecificSession(sid); toast('🔄 تم البدء من جديد','g');
 }
-function exportEditedJSON(){
-  if(!DATA_RAW)return;
-  var blob=new Blob([JSON.stringify(DATA_RAW,null,2)],{type:'application/json'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a'); a.href=url; a.download='grammar_edited.json'; a.click();
-  URL.revokeObjectURL(url); toast('📥 تم تنزيل الملف','g');
-}
-function setHeaderBtns(visible){
-  var show=visible?'flex':'none', ph=visible?'none':'block';
-  var dl=$('btnDownloadJson'); if(dl) dl.style.display=show;
-  var dlp=$('btnDownloadPlaceholder'); if(dlp) dlp.style.display=ph;
-  var imp=$('btnImportJson'); if(imp) imp.style.display=show;
-  var impp=$('btnImportPlaceholder'); if(impp) impp.style.display=ph;
-}
+
+
 function clearSave(){currentSessionId=null;}
 function doDiscard(){currentSessionId=null; $('resumeBanner').style.display='none'; load(originalQs);}
 (function(){

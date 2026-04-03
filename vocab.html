@@ -500,21 +500,7 @@
       max-width: 340px;
       margin: 0 auto 20px;
     }
-    .btn-sample {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 9px 16px;
-      cursor: pointer;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-      transition: all var(--transition);
-    }
-    .btn-sample:hover { border-color: var(--purple); color: var(--purple); background: rgba(188,140,255,.05); }
+
     .results-screen {
       display: none;
       flex-direction: column;
@@ -861,18 +847,12 @@
   <!-- HEADER -->
   <header style="display:flex;flex-direction:column;align-items:center;padding:16px 0 12px;gap:12px;flex-shrink:0;width:100%;">
     <div style="display:flex;align-items:center;justify-content:center;gap:12px;width:100%;">
-      <label class="btn-file" id="btnImportJson" for="fileInput" title="استيراد JSON" style="display:none;padding:6px;border-radius:50%;cursor:pointer;background:var(--bg-surface);border:1px solid var(--border);height:30px;width:30px;align-items:center;justify-content:center;">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M8 7.293l2.146-2.147a.5.5 0 1 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 7.293V1a.5.5 0 0 1 1 0v6.293z"/></svg>
-      </label>
-      <div id="btnImportPlaceholder" style="width:30px;"></div>
-      <div class="logo" id="logoBtn" style="cursor:pointer;">
+
+      <div class="logo" id="logoBtn" onclick="window.location.href='index.html'" title="العودة إلى الشاشة الرئيسية" style="cursor:pointer;">
         <div class="logo-icon">🌙</div>
         <div class="logo-text">Crescent Quiz<span>English Vocabulary Pro</span></div>
       </div>
-      <button class="btn-file" id="btnDownloadJson" onclick="exportEditedJSON()" title="تصدير JSON" style="display:none;padding:6px;border-radius:50%;height:30px;width:30px;align-items:center;justify-content:center;">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
-      </button>
-      <div id="btnDownloadPlaceholder" style="width:30px;"></div>
+
     </div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap;justify-content:center;width:100%;overflow-x:auto;padding-bottom:4px;">
       <button class="btn-search" id="btnSearchMode" onclick="toggleSearchMode()" title="بحث" style="background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;height:28px;cursor:pointer;font-size:0.8rem;color:var(--text-secondary);transition:.18s;display:flex;align-items:center;justify-content:center;box-sizing:border-box;margin:0;">🔍</button>
@@ -919,7 +899,6 @@
     <span class="empty-icon">📂</span>
     <div class="empty-title">لا توجد مفردات محملة</div>
     <div class="empty-desc">ارفع ملف JSON للبدء.</div>
-    <button class="btn-sample" id="btnSample">تحميل بيانات تجريبية</button>
   </div>
   <div id="searchModeDiv" style="display:none; flex-direction:column; flex:1; min-height:0; width:100%; margin-bottom:10px; padding:0 12px;">
     <input type="text" id="searchInput" oninput="performSearch()" placeholder="🔍 ابحث عن كلمة..." style="width:100%; background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; color:var(--text-primary); font-family:'Noto Kufi Arabic',sans-serif; margin-bottom:12px; outline:none;">
@@ -1036,10 +1015,13 @@ function toggleSearchMode(){
   }
 }
 function performSearch(){
-  var query=$('searchInput').value.toLowerCase().trim(), resList=$('searchResults');
+  var query=$('searchInput').value.trim(), resList=$('searchResults');
   resList.innerHTML='';
   if(!query)return;
-  var results=DATA_RAW.filter(function(w){ return w.en.toLowerCase().includes(query) || w.ar.includes(query); });
+  var queryLower=query.toLowerCase();
+  var results=DATA_RAW.filter(function(w){
+    return w.en.toLowerCase().includes(queryLower) || w.ar.includes(query);
+  });
   if(results.length===0){resList.innerHTML='<div style="text-align:center;color:var(--text-muted);">لا توجد نتائج مطابقة 😕</div>';return;}
   results.forEach(function(w){
     var item=document.createElement('div'); item.style.cssText='background:var(--bg-elevated);padding:10px 14px;border-radius:6px;border:1px solid var(--border);';
@@ -1047,14 +1029,21 @@ function performSearch(){
     resList.appendChild(item);
   });
 }
+async function computeDataHash(data) {
+  var str = JSON.stringify(data.map(function(w){ return {en:w.en, ar:w.ar, type:w.type}; }));
+  var buf = new TextEncoder().encode(str);
+  var hashBuf = await crypto.subtle.digest('SHA-256', buf);
+  var arr = Array.from(new Uint8Array(hashBuf));
+  return arr.map(function(b){ return b.toString(16).padStart(2,'0'); }).join('').substring(0,16);
+}
 function saveState() {
   if(!words||words.length===0)return;
-  const state = { words, currentIndex, isReversed, correctCount, wrongCount, posErrorCount, wrongWords, posErrorWords, answersCache, DATA_RAW };
+  const state = { words, currentIndex, isReversed, correctCount, wrongCount, posErrorCount, wrongWords, posErrorWords, answersCache, DATA_RAW, dataHash: currentDataHash };
   var sessions=JSON.parse(localStorage.getItem('vocab_sessions_list')||'[]');
   if(!currentSessionId){
     currentSessionId='sess_'+Date.now();
     var dateStr=new Date().toLocaleDateString('ar-EG'), timeStr=new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
-    sessions.push({id:currentSessionId, name:'جلسة '+dateStr+' - '+timeStr, data:state});
+    sessions.push({id:currentSessionId, name:'جلسة '+dateStr+' - '+timeStr, dataHash: currentDataHash, data:state});
   } else {
     var idx=sessions.findIndex(function(s){return s.id===currentSessionId;});
     if(idx!==-1)sessions[idx].data=state;
@@ -1084,19 +1073,19 @@ function closeSessionsModal(){$('sessionsModal').classList.remove('show');}
 function loadSpecificSession(sid){
   var sessions=JSON.parse(localStorage.getItem('vocab_sessions_list')||'[]');
   var sess=sessions.find(function(s){return s.id===sid;}); if(!sess)return;
-  currentSessionId=sess.id; var s=sess.data;
+  currentSessionId=sess.id; currentDataHash=sess.dataHash||null; var s=sess.data;
   words=s.words; currentIndex=s.currentIndex||0; isReversed=s.isReversed||false; correctCount=s.correctCount||0; wrongCount=s.wrongCount||0; posErrorCount=s.posErrorCount||0; wrongWords=s.wrongWords||[]; posErrorWords=s.posErrorWords||[]; answersCache=s.answersCache||{}; DATA_RAW=s.DATA_RAW;
   toggleReverse.classList.toggle('active', isReversed); toggleLabel.textContent=isReversed?'AR→EN':'EN→AR';
   closeSessionsModal(); $('resumeBanner').classList.remove('show'); emptyState.style.display='none';
   resultsScreen.classList.remove('show'); quizArea.style.display='block'; progressBlock.style.display='block';
-  setHeaderBtns(true); updateStats(); showWord(); showToast('✅ تم استعادة الجلسة','green');
+  updateStats(); showWord(); showToast('✅ تم استعادة الجلسة','green');
 }
 function deleteSpecificSession(sid){
   var sessions=JSON.parse(localStorage.getItem('vocab_sessions_list')||'[]');
   sessions=sessions.filter(function(s){return s.id!==sid;});
   try{localStorage.setItem('vocab_sessions_list',JSON.stringify(sessions));}catch(e){}
   if(currentSessionId===sid) currentSessionId=null;
-  if(sessions.length===0){ $('resumeBanner').classList.remove('show'); closeSessionsModal(); quizArea.style.display='none'; progressBlock.style.display='none'; emptyState.style.display='block'; DATA_RAW=null; words=[]; setHeaderBtns(false); }
+  if(sessions.length===0){ $('resumeBanner').classList.remove('show'); closeSessionsModal(); quizArea.style.display='none'; progressBlock.style.display='none'; emptyState.style.display='block'; DATA_RAW=null; words=[]; }
   else{ showSessionsModal(); }
   showToast('🗑️ تم حذف الجلسة','red');
 }
@@ -1111,22 +1100,7 @@ function restartSpecificSession(sid){
   try{localStorage.setItem('vocab_sessions_list',JSON.stringify(sessions));}catch(e){}
   loadSpecificSession(sid); showToast('🔄 تم البدء من جديد','green');
 }
-function exportEditedJSON(){
-  if(!DATA_RAW)return;
-  var json=JSON.stringify(DATA_RAW,null,2);
-  var blob=new Blob([json],{type:'application/json'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a'); a.href=url; a.download='vocab_edited.json'; a.click();
-  URL.revokeObjectURL(url);
-  showToast('📥 تم تنزيل الملف','green');
-}
-function setHeaderBtns(visible){
-  var show=visible?'flex':'none', ph=visible?'none':'block';
-  var dl=document.getElementById('btnDownloadJson'); if(dl) dl.style.display=show;
-  var dlp=document.getElementById('btnDownloadPlaceholder'); if(dlp) dlp.style.display=ph;
-  var imp=document.getElementById('btnImportJson'); if(imp) imp.style.display=show;
-  var impp=document.getElementById('btnImportPlaceholder'); if(impp) impp.style.display=ph;
-}
+
 const POS_LABELS = {
   v1:   { short: 'v1',   full: 'Verb' },
   v2:   { short: 'v2',   full: 'Past' },
@@ -1138,23 +1112,7 @@ const POS_LABELS = {
   conj: { short: 'conj', full: 'Conjunction' },
   pron: { short: 'pron', full: 'Pronoun' }
 };
-const SAMPLE_DATA = [
-  { en: "abandon",   ar: "يَتَخَلَّى عن",   type: ["v1"] },
-  { en: "ability",   ar: "قُدْرَة",          type: ["n"] },
-  { en: "abstract",  ar: "مُجَرَّد / مُلَخَّص", type: ["adj","n"] },
-  { en: "accurate",  ar: "دَقِيق",           type: ["adj"] },
-  { en: "achieve",   ar: "يُحَقِّق",          type: ["v1"] },
-  { en: "acquire",   ar: "يَكْتَسِب",         type: ["v1"] },
-  { en: "adapt",     ar: "يَتَكَيَّف",         type: ["v1"] },
-  { en: "adequate",  ar: "كَافٍ / مُلَائِم",  type: ["adj"] },
-  { en: "advance",   ar: "يَتَقَدَّم / تَقَدُّم", type: ["v1","n"] },
-  { en: "although",  ar: "بالرغم من",         type: ["conj"] },
-  { en: "ancient",   ar: "قَدِيم",            type: ["adj"] },
-  { en: "apparently",ar: "يبدو أن",           type: ["adv"] },
-  { en: "approach",  ar: "يَقْتَرِب / نَهْج",  type: ["v1","n"] },
-  { en: "beneath",   ar: "تَحْتَ",            type: ["prep"] },
-  { en: "briefly",   ar: "بإيجاز",            type: ["adv"] }
-];
+
 let words = [];
 let currentIndex = 0;
 let isReversed = false;
@@ -1172,6 +1130,7 @@ let deferredPrompt = null;
 let shuffleEnabled = false;
 let inSearchMode = false;
 let currentSessionId = null;
+let currentDataHash = null;
 let DATA_RAW = null;
 function onShuffleToggle(){
   shuffleEnabled = !shuffleEnabled;
@@ -1205,25 +1164,13 @@ const topNavIndex    = $('topNavIndex');
 const toggleReverse  = $('toggleReverse');
 const toggleLabel    = $('toggleLabel');
 const fileInput      = $('fileInput');
-const btnSample      = $('btnSample');
 const btnRestart     = $('btnRestart');
 const wordCard       = $('wordCard');
 function init() {
   buildPosGrid();
   bindEvents();
   registerSW();
-  try {
-    const savedJson = localStorage.getItem('crescent_vocab_json');
-    if (savedJson) {
-      const parsed = JSON.parse(savedJson);
-      if (Array.isArray(parsed) && parsed.length) {
-        window._savedJsonData = parsed;
-      }
-    }
-  } catch(e) {}
-  if (!loadSavedState() && window._savedJsonData) {
-    loadWords(window._savedJsonData);
-  }
+  loadSavedState();
 }
 function buildPosGrid() {
   posGrid.innerHTML = '';
@@ -1239,7 +1186,6 @@ function buildPosGrid() {
 }
 function bindEvents() {
   fileInput.addEventListener('change', handleFileUpload);
-  btnSample.addEventListener('click', () => loadWords(SAMPLE_DATA));
   toggleReverse.addEventListener('click', toggleReverseMode);
   translationBlock.addEventListener('click', revealTranslation);
   btnKnew.addEventListener('click', () => evalMeaning(true));
@@ -1272,17 +1218,27 @@ function handleFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = ev => {
+  reader.onload = async ev => {
     try {
       const data = JSON.parse(ev.target.result);
       if (!Array.isArray(data)) throw new Error('يجب أن يكون الملف مصفوفة JSON');
       const valid = data.filter(w => w.en && w.ar && Array.isArray(w.type) && w.type.length);
       if (!valid.length) throw new Error('لم يتم العثور على كلمات صالحة');
-      loadWords(valid);
+      const hash = await computeDataHash(valid);
+      var sessions = JSON.parse(localStorage.getItem('vocab_sessions_list') || '[]');
+      var existingSession = sessions.find(function(s){ return s.dataHash === hash; });
+      if (existingSession) {
+        currentDataHash = hash;
+        loadSpecificSession(existingSession.id);
+        showToast('📂 تم فتح الجلسة السابقة لهذا الملف', 'green');
+      } else {
+        currentDataHash = hash;
+        loadWords(valid);
+        showToast('✅ تم تحميل ' + valid.length + ' كلمة بنجاح', 'green');
+      }
       try{localStorage.setItem('crescent_vocab_json', JSON.stringify(valid));}catch(e){}
-      showToast(`✅ تم تحميل ${valid.length} كلمة بنجاح`, 'green');
     } catch (err) {
-      showToast(`❌ خطأ: ${err.message}`, 'red');
+      showToast('❌ خطأ: ' + err.message, 'red');
     }
     fileInput.value = '';
   };
@@ -1305,7 +1261,6 @@ function loadWords(data) {
   resultsScreen.classList.remove('show');
   quizArea.style.display = 'block';
   progressBlock.style.display = 'block';
-  setHeaderBtns(true);
   showWord();
   saveState();
 }
