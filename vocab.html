@@ -861,11 +861,17 @@
   <!-- HEADER -->
   <header style="display:flex;flex-direction:column;align-items:center;padding:16px 0 12px;gap:12px;flex-shrink:0;width:100%;">
     <div style="display:flex;align-items:center;justify-content:center;gap:12px;width:100%;">
+      <label class="btn-file" id="btnImportJson" for="fileInput" title="استيراد JSON" style="display:none;padding:6px;border-radius:50%;cursor:pointer;background:var(--bg-surface);border:1px solid var(--border);height:30px;width:30px;align-items:center;justify-content:center;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M8 7.293l2.146-2.147a.5.5 0 1 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 7.293V1a.5.5 0 0 1 1 0v6.293z"/></svg>
+      </label>
       <div id="btnImportPlaceholder" style="width:30px;"></div>
       <div class="logo" id="logoBtn" style="cursor:pointer;">
         <div class="logo-icon">🌙</div>
         <div class="logo-text">Crescent Quiz<span>English Vocabulary Pro</span></div>
       </div>
+      <button class="btn-file" id="btnDownloadJson" onclick="exportEditedJSON()" title="تصدير JSON" style="display:none;padding:6px;border-radius:50%;height:30px;width:30px;align-items:center;justify-content:center;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+      </button>
       <div id="btnDownloadPlaceholder" style="width:30px;"></div>
     </div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap;justify-content:center;width:100%;overflow-x:auto;padding-bottom:4px;">
@@ -1068,7 +1074,7 @@ function showSessionsModal(){
     [...sessions].reverse().forEach(function(sess){
       var prog=sess.data.currentIndex+1, tot=sess.data.words.length;
       var item=document.createElement('div'); item.style.cssText='background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:12px;';
-      item.innerHTML='<div style="margin-bottom:8px;font-weight:bold;color:var(--blue);">'+sess.name+'</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">التقدم: '+prog+' / '+tot+'</div><div style="display:flex;gap:8px;"><button style="background:var(--green-dim);color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;" onclick="loadSpecificSession(\\''+sess.id+'\\')">استعادة</button><button style="background:none;border:1px solid var(--red);color:var(--red);padding:5px 10px;border-radius:4px;cursor:pointer;" onclick="deleteSpecificSession(\\''+sess.id+'\\')">حذف</button></div>';
+      item.innerHTML='<div style="margin-bottom:8px;font-weight:bold;color:var(--blue);">'+sess.name+'</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">التقدم: '+prog+' / '+tot+'</div><div style="display:flex;gap:8px;"><button style="background:var(--green-dim);color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;" onclick="loadSpecificSession(\''+sess.id+'\')">استعادة</button><button style="background:none;border:1px solid var(--border);color:var(--text-secondary);padding:5px 10px;border-radius:4px;cursor:pointer;" onclick="restartSpecificSession(\''+sess.id+'\')">إعادة</button><button style="background:none;border:1px solid var(--red);color:var(--red);padding:5px 10px;border-radius:4px;cursor:pointer;" onclick="deleteSpecificSession(\''+sess.id+'\')">حذف</button></div>';
       listDiv.appendChild(item);
     });
   }
@@ -1083,19 +1089,44 @@ function loadSpecificSession(sid){
   toggleReverse.classList.toggle('active', isReversed); toggleLabel.textContent=isReversed?'AR→EN':'EN→AR';
   closeSessionsModal(); $('resumeBanner').classList.remove('show'); emptyState.style.display='none';
   resultsScreen.classList.remove('show'); quizArea.style.display='block'; progressBlock.style.display='block';
-  updateStats(); showWord(); showToast('✅ تم استعادة الجلسة','green');
+  setHeaderBtns(true); updateStats(); showWord(); showToast('✅ تم استعادة الجلسة','green');
 }
 function deleteSpecificSession(sid){
   var sessions=JSON.parse(localStorage.getItem('vocab_sessions_list')||'[]');
   sessions=sessions.filter(function(s){return s.id!==sid;});
   try{localStorage.setItem('vocab_sessions_list',JSON.stringify(sessions));}catch(e){}
   if(currentSessionId===sid) currentSessionId=null;
-  if(sessions.length===0){ $('resumeBanner').classList.remove('show'); closeSessionsModal(); quizArea.style.display='none'; progressBlock.style.display='none'; emptyState.style.display='block'; DATA_RAW=null; words=[]; }
+  if(sessions.length===0){ $('resumeBanner').classList.remove('show'); closeSessionsModal(); quizArea.style.display='none'; progressBlock.style.display='none'; emptyState.style.display='block'; DATA_RAW=null; words=[]; setHeaderBtns(false); }
   else{ showSessionsModal(); }
   showToast('🗑️ تم حذف الجلسة','red');
 }
 function applyPendingState() { showSessionsModal(); }
 function clearSavedState() { currentSessionId = null; }
+function restartSpecificSession(sid){
+  var sessions=JSON.parse(localStorage.getItem('vocab_sessions_list')||'[]');
+  var idx=sessions.findIndex(function(s){return s.id===sid;}); if(idx===-1)return;
+  sessions[idx].data.currentIndex=0; sessions[idx].data.correctCount=0; sessions[idx].data.wrongCount=0;
+  sessions[idx].data.posErrorCount=0; sessions[idx].data.wrongWords=[]; sessions[idx].data.posErrorWords=[];
+  sessions[idx].data.answersCache={};
+  try{localStorage.setItem('vocab_sessions_list',JSON.stringify(sessions));}catch(e){}
+  loadSpecificSession(sid); showToast('🔄 تم البدء من جديد','green');
+}
+function exportEditedJSON(){
+  if(!DATA_RAW)return;
+  var json=JSON.stringify(DATA_RAW,null,2);
+  var blob=new Blob([json],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a'); a.href=url; a.download='vocab_edited.json'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('📥 تم تنزيل الملف','green');
+}
+function setHeaderBtns(visible){
+  var show=visible?'flex':'none', ph=visible?'none':'block';
+  var dl=document.getElementById('btnDownloadJson'); if(dl) dl.style.display=show;
+  var dlp=document.getElementById('btnDownloadPlaceholder'); if(dlp) dlp.style.display=ph;
+  var imp=document.getElementById('btnImportJson'); if(imp) imp.style.display=show;
+  var impp=document.getElementById('btnImportPlaceholder'); if(impp) impp.style.display=ph;
+}
 const POS_LABELS = {
   v1:   { short: 'v1',   full: 'Verb' },
   v2:   { short: 'v2',   full: 'Past' },
@@ -1201,7 +1232,7 @@ function buildPosGrid() {
     btn.className = 'btn-pos';
     btn.dataset.pos = key;
     btn.disabled = true;
-    btn.innerHTML = \`\${label.short}<span class="pos-full">\${label.full}</span>\`;
+    btn.innerHTML = `${label.short}<span class="pos-full">${label.full}</span>`;
     btn.addEventListener('click', () => handlePosClick(key, btn));
     posGrid.appendChild(btn);
   });
@@ -1249,9 +1280,9 @@ function handleFileUpload(e) {
       if (!valid.length) throw new Error('لم يتم العثور على كلمات صالحة');
       loadWords(valid);
       try{localStorage.setItem('crescent_vocab_json', JSON.stringify(valid));}catch(e){}
-      showToast(\`✅ تم تحميل \${valid.length} كلمة بنجاح\`, 'green');
+      showToast(`✅ تم تحميل ${valid.length} كلمة بنجاح`, 'green');
     } catch (err) {
-      showToast(\`❌ خطأ: \${err.message}\`, 'red');
+      showToast(`❌ خطأ: ${err.message}`, 'red');
     }
     fileInput.value = '';
   };
@@ -1274,6 +1305,7 @@ function loadWords(data) {
   resultsScreen.classList.remove('show');
   quizArea.style.display = 'block';
   progressBlock.style.display = 'block';
+  setHeaderBtns(true);
   showWord();
   saveState();
 }
@@ -1284,7 +1316,7 @@ function showWord() {
   posAnswered = false;
   posFirstClickDone = false;
   if (!answersCache[currentIndex]) isRevisiting = false;
-  cardIndex.textContent = \`#\${currentIndex + 1}\`;
+  cardIndex.textContent = `#${currentIndex + 1}`;
   cardBadges.innerHTML = '';
   if (!isReversed) {
     w.type.forEach(t => {
@@ -1316,7 +1348,7 @@ function showWord() {
   btnPrev.disabled = currentIndex === 0;
   btnTopNext.disabled = true;
   topNav.style.display = 'flex';
-  topNavIndex.textContent = \`\${currentIndex + 1} / \${words.length}\`;
+  topNavIndex.textContent = `${currentIndex + 1} / ${words.length}`;
   document.querySelectorAll('.btn-pos').forEach(btn => {
     btn.disabled = false;
     btn.className = 'btn-pos';
@@ -1340,14 +1372,14 @@ function showWord() {
       posAnswered = true;
       const w2 = words[currentIndex];
       document.querySelectorAll('.btn-pos').forEach(b => b.disabled = true);
-      const selectedBtn = posGrid.querySelector(\`[data-pos="\${cached.posSelected}"]\`);
+      const selectedBtn = posGrid.querySelector(`[data-pos="${cached.posSelected}"]`);
       if (selectedBtn) selectedBtn.className = cached.posCorrect ? 'btn-pos correct' : 'btn-pos wrong';
       w2.type.forEach(t => {
-        const cb = posGrid.querySelector(\`[data-pos="\${t}"]\`);
+        const cb = posGrid.querySelector(`[data-pos="${t}"]`);
         if (cb && cb.className === 'btn-pos') cb.className = 'btn-pos correct';
       });
       if (cached.firstClick) {
-        const fc = posGrid.querySelector(\`[data-pos="\${cached.firstClick.pos}"]\`);
+        const fc = posGrid.querySelector(`[data-pos="${cached.firstClick.pos}"]`);
         if (fc) fc.className = cached.firstClick.correct ? 'btn-pos correct' : 'btn-pos wrong';
       }
       if (isRevisiting) {
@@ -1359,7 +1391,7 @@ function showWord() {
     }
   }
   $('btnTts').style.display = isReversed ? 'none' : 'flex';
-  progressLabel.textContent = \`\${currentIndex + 1} / \${words.length}\`;
+  progressLabel.textContent = `${currentIndex + 1} / ${words.length}`;
   const pct = ((currentIndex) / words.length) * 100;
   progressFill.style.width = pct + '%';
 }
@@ -1438,7 +1470,7 @@ function handlePosClick(selected, btn) {
       if (!posErrorWords.find(x => x.en === w.en)) posErrorWords.push(w);
       updateStats();
       w.type.forEach(t => {
-        const cb = posGrid.querySelector(\`[data-pos="\${t}"]\`);
+        const cb = posGrid.querySelector(`[data-pos="${t}"]`);
         if (cb) cb.className = 'btn-pos correct';
       });
     }
@@ -1475,7 +1507,7 @@ function handlePosClick(selected, btn) {
     }
     document.querySelectorAll('.btn-pos').forEach(b => b.disabled = true);
     w.type.forEach(t => {
-      const cb = posGrid.querySelector(\`[data-pos="\${t}"]\`);
+      const cb = posGrid.querySelector(`[data-pos="${t}"]`);
       if (cb && cb.className === 'btn-pos') cb.className = 'btn-pos correct';
     });
     savePosToCache(selected, isCorrect);
@@ -1558,9 +1590,9 @@ function restartQuiz() {
 function showToast(msg, type = 'orange') {
   const container = $('toastContainer');
   const toast = document.createElement('div');
-  toast.className = \`toast \${type}\`;
+  toast.className = `toast ${type}`;
   const icons = { orange: '⚠️', green: '✅', red: '❌' };
-  toast.innerHTML = \`<span class="toast-icon">\${icons[type] || '💬'}</span><span>\${msg}</span>\`;
+  toast.innerHTML = `<span class="toast-icon">${icons[type] || '💬'}</span><span>${msg}</span>`;
   container.appendChild(toast);
   setTimeout(() => {
     toast.classList.add('hide');
@@ -1629,23 +1661,23 @@ function buildLog(type) {
   const data = type === 'wrong' ? wrongWords : posErrorWords;
   list.innerHTML = '';
   if (!data.length) {
-    list.innerHTML = \`<div style="color:var(--text-muted);font-size:0.78rem;padding:6px;">لا توجد أخطاء 🎉</div>\`;
+    list.innerHTML = `<div style="color:var(--text-muted);font-size:0.78rem;padding:6px;">لا توجد أخطاء 🎉</div>`;
     return;
   }
   data.forEach(w => {
     const item = document.createElement('div');
     item.className = 'log-item';
     const types = w.type.map(t =>
-      \`<span class="log-type-badge">\${POS_LABELS[t]?.short || t}</span>\`
+      `<span class="log-type-badge">${POS_LABELS[t]?.short || t}</span>`
     ).join('');
-    item.innerHTML = \`
+    item.innerHTML = `
       <div class="log-en">
-        <button class="btn-tts-small" onclick="speakWord('\${w.en}')" title="استمع">🔊</button>
-        \${w.en}
+        <button class="btn-tts-small" onclick="speakWord('${w.en}')" title="استمع">🔊</button>
+        ${w.en}
       </div>
-      <div class="log-ar">\${w.ar}</div>
-      <div class="log-types">\${types}</div>
-    \`;
+      <div class="log-ar">${w.ar}</div>
+      <div class="log-types">${types}</div>
+    `;
     list.appendChild(item);
   });
 }

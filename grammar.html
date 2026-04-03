@@ -159,11 +159,13 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
 <div class="wrap">
   <header style="display:flex;flex-direction:column;align-items:center;padding:16px 0 12px;gap:12px;flex-shrink:0;width:100%;">
     <div style="display:flex;align-items:center;justify-content:center;gap:12px;width:100%;">
+      <label class="btn-upload" id="btnImportJson" for="fileInput" title="استيراد JSON" style="display:none;padding:6px;border-radius:50%;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M8 7.293l2.146-2.147a.5.5 0 1 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 7.293V1a.5.5 0 0 1 1 0v6.293z"/></svg></label>
       <div id="btnImportPlaceholder" style="width:30px;"></div>
       <div class="logo" id="logoBtn" style="cursor:pointer;">
         <div class="logo-icon">&#x1F4DD;</div>
         <div class="logo-text">Crescent Quiz<small>English Grammar Pro</small></div>
       </div>
+      <button class="btn-upload" id="btnDownloadJson" onclick="exportEditedJSON()" title="تصدير JSON" style="display:none;padding:6px;border-radius:50%;"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg></button>
       <div id="btnDownloadPlaceholder" style="width:30px;"></div>
     </div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap;justify-content:center;width:100%;overflow-x:auto;padding-bottom:4px;">
@@ -242,6 +244,13 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
       <div class="rule-labels"><span class="lbl-en" id="lblEn">-</span><span class="lbl-ar" id="lblAr">-</span></div>
       <div class="exp-list" id="expList"></div>
     </div>
+  </div>
+  <div class="section" id="secTrans" style="display:none">
+    <div class="sec-head" onclick="tog('secTrans')">
+      <div class="sec-title">&#x62A;&#x631;&#x62C;&#x645;&#x629; <b>Translation</b></div>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="sec-body"><div class="trans-grid" id="transGrid"></div></div>
   </div>
   </div>
   <div class="nav" id="navDiv" style="display:none">
@@ -347,7 +356,7 @@ function load(data){
   $('pgWrap').style.display='block';
   $('navDiv').style.display='flex';
   $('resDiv').classList.remove('show');
-  updateStats();showQ();
+  setHeaderBtns(true); updateStats();showQ();
 }
 function showQ(){
   var q=qs[ci]; if(!q)return;
@@ -465,7 +474,7 @@ function applyUI(q,chosen){
   if(bl){bl.textContent=q.answer;bl.className='blank ok';}
 }
 function renderExp(q){
-  var div=$('expList'); div.innerHTML='';
+  var div=$('expList'); if(!div)return; div.innerHTML='';
   var why=q.whyUsed||q.explanation||'';
   var how=q.howToKnow||'';
   if(why){var r=document.createElement('div');r.className='exp-row';r.innerHTML='<span class="exp-icon">&#128161;</span><div class="exp-txt">'+why+'</div>';div.appendChild(r);}
@@ -473,7 +482,8 @@ function renderExp(q){
   if(!why&&!how)div.innerHTML='<div class="exp-txt" style="color:var(--t3)">&#x644;&#x627; &#x64A;&#x648;&#x62C;&#x62F; &#x634;&#x631;&#x62D;.</div>';
 }
 function renderTrans(q){
-  var div=$('transGrid'); div.innerHTML='';
+  var div=$('transGrid'); if(!div)return; div.innerHTML='';
+  var sec=$('secTrans'); if(sec) sec.style.display=q.words&&q.words.length?'':'none';
   if(!q.words)return;
   q.words.forEach(function(wd){
     var isB=wd.w==='___';
@@ -617,7 +627,7 @@ function renderPracticeQuestion(q){
 function save(){
   if(!qs||qs.length===0)return;
   var sessionData={qs:qs,ci:ci,ok:ok,er:er,erItems:erItems,ruleErr:ruleErr,cache:cache,DATA_RAW:DATA_RAW};
-  var sessions=JSON.parse((function(){try{return localStorage.getItem('grammar_sessions_list')}catch(e){return null}}())||'[]');
+  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
   if(!currentSessionId){
     currentSessionId='sess_'+Date.now();
     var dateStr=new Date().toLocaleDateString('ar-EG'), timeStr=new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
@@ -626,17 +636,24 @@ function save(){
     var idx=sessions.findIndex(function(s){return s.id===currentSessionId;});
     if(idx!==-1)sessions[idx].data=sessionData;
   }
-  try{(function(){try{return localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions)}catch(e){return null}}()));}catch(e){}
+  try{localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions));}catch(e){}
 }
 function showSessionsModal(){
-  var sessions=JSON.parse((function(){try{return localStorage.getItem('grammar_sessions_list')}catch(e){return null}}())||'[]');
+  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
   var listDiv=$('sessionsList'); listDiv.innerHTML='';
   if(sessions.length===0){listDiv.innerHTML='<p style="text-align:center;color:var(--t3);">لا توجد جلسات محفوظة.</p>';}
   else{
     [...sessions].reverse().forEach(function(sess){
       var prog=sess.data.ci+1, tot=sess.data.qs.length;
       var item=document.createElement('div'); item.style.cssText='background:var(--elevated);border:1px solid var(--border);border-radius:6px;padding:12px;';
-      item.innerHTML='<div style="margin-bottom:8px;font-weight:bold;color:var(--blue);">'+sess.name+'</div><div style="font-size:12px;color:var(--t2);margin-bottom:8px;">التقدم: '+prog+' / '+tot+'</div><div style="display:flex;gap:8px;"><button style="background:var(--green2);color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;" onclick="loadSpecificSession(\\''+sess.id+'\\')">استعادة</button><button style="background:none;border:1px solid var(--red);color:var(--red);padding:5px 10px;border-radius:4px;cursor:pointer;" onclick="deleteSpecificSession(\\''+sess.id+'\\')">حذف</button></div>';
+      var info=document.createElement('div'); info.style.cssText='margin-bottom:8px;font-weight:bold;color:var(--blue);'; info.textContent=sess.name;
+      var meta=document.createElement('div'); meta.style.cssText='font-size:12px;color:var(--t2);margin-bottom:8px;'; meta.textContent='التقدم: '+prog+' / '+tot;
+      var row=document.createElement('div'); row.style.cssText='display:flex;gap:8px;';
+      var bLoad=document.createElement('button'); bLoad.style.cssText='background:var(--green2);color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;'; bLoad.textContent='استعادة'; bLoad.onclick=(function(id){return function(){loadSpecificSession(id);};})(sess.id);
+      var bRestart=document.createElement('button'); bRestart.style.cssText='background:none;border:1px solid var(--border);color:var(--t2);padding:5px 10px;border-radius:4px;cursor:pointer;'; bRestart.textContent='إعادة'; bRestart.onclick=(function(id){return function(){restartSpecificSession(id);};})(sess.id);
+      var bDel=document.createElement('button'); bDel.style.cssText='background:none;border:1px solid var(--red);color:var(--red);padding:5px 10px;border-radius:4px;cursor:pointer;'; bDel.textContent='حذف'; bDel.onclick=(function(id){return function(){deleteSpecificSession(id);};})(sess.id);
+      row.appendChild(bLoad); row.appendChild(bRestart); row.appendChild(bDel);
+      item.appendChild(info); item.appendChild(meta); item.appendChild(row);
       listDiv.appendChild(item);
     });
   }
@@ -644,27 +661,49 @@ function showSessionsModal(){
 }
 function closeSessionsModal(){$('sessionsModal').classList.remove('show');}
 function loadSpecificSession(sid){
-  var sessions=JSON.parse((function(){try{return localStorage.getItem('grammar_sessions_list')}catch(e){return null}}())||'[]');
+  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
   var sess=sessions.find(function(s){return s.id===sid;}); if(!sess)return;
   currentSessionId=sess.id; var d=sess.data;
   qs=d.qs; ci=d.ci; ok=d.ok; er=d.er; erItems=d.erItems||[]; ruleErr=d.ruleErr||{}; cache=d.cache||{}; DATA_RAW=d.DATA_RAW;
   closeSessionsModal(); $('resumeBanner').style.display='none'; $('emptyDiv').style.display='none';
   $('quizDiv').style.display='block'; $('pgWrap').style.display='block'; $('navDiv').style.display='flex';
-  updateStats(); showQ(); toast('✅ تم الاستعادة','g');
+  setHeaderBtns(true); updateStats(); showQ(); toast('✅ تم الاستعادة','g');
 }
 function deleteSpecificSession(sid){
-  var sessions=JSON.parse((function(){try{return localStorage.getItem('grammar_sessions_list')}catch(e){return null}}())||'[]');
+  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
   sessions=sessions.filter(function(s){return s.id!==sid;});
-  try{(function(){try{return localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions)}catch(e){return null}}()));}catch(e){}
+  try{localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions));}catch(e){}
   if(currentSessionId===sid) currentSessionId=null;
-  if(sessions.length===0){ $('resumeBanner').style.display='none'; closeSessionsModal(); $('quizDiv').style.display='none'; $('emptyDiv').style.display='block'; DATA_RAW=null; qs=[]; }
+  if(sessions.length===0){ $('resumeBanner').style.display='none'; closeSessionsModal(); $('quizDiv').style.display='none'; $('emptyDiv').style.display='block'; DATA_RAW=null; qs=[]; setHeaderBtns(false); }
   else{ showSessionsModal(); }
   toast('🗑️ تم حذف الجلسة','r');
+}
+function restartSpecificSession(sid){
+  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
+  var idx=sessions.findIndex(function(s){return s.id===sid;}); if(idx===-1)return;
+  sessions[idx].data.ci=0; sessions[idx].data.ok=0; sessions[idx].data.er=0;
+  sessions[idx].data.erItems=[]; sessions[idx].data.ruleErr={}; sessions[idx].data.cache={};
+  try{localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions));}catch(e){}
+  loadSpecificSession(sid); toast('🔄 تم البدء من جديد','g');
+}
+function exportEditedJSON(){
+  if(!DATA_RAW)return;
+  var blob=new Blob([JSON.stringify(DATA_RAW,null,2)],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a'); a.href=url; a.download='grammar_edited.json'; a.click();
+  URL.revokeObjectURL(url); toast('📥 تم تنزيل الملف','g');
+}
+function setHeaderBtns(visible){
+  var show=visible?'flex':'none', ph=visible?'none':'block';
+  var dl=$('btnDownloadJson'); if(dl) dl.style.display=show;
+  var dlp=$('btnDownloadPlaceholder'); if(dlp) dlp.style.display=ph;
+  var imp=$('btnImportJson'); if(imp) imp.style.display=show;
+  var impp=$('btnImportPlaceholder'); if(impp) impp.style.display=ph;
 }
 function clearSave(){currentSessionId=null;}
 function doDiscard(){currentSessionId=null; $('resumeBanner').style.display='none'; load(originalQs);}
 (function(){
-  var sessions=JSON.parse((function(){try{return localStorage.getItem('grammar_sessions_list')}catch(e){return null}}())||'[]');
+  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
   if(sessions.length>0){ $('resumeInfo').textContent='لديك '+sessions.length+' جلسة محفوظة.'; $('resumeBanner').style.display='flex'; }
 })();
 </script>
