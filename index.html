@@ -225,49 +225,58 @@ document.head.appendChild(manifestLink);
 </div>
 <script>
 const APPS = {
-  "bio": {
-    title: "🔬 كيمياء + أحياء",
-    html: ``
-  },
-  "grammar": {
-    title: "📝 قواعد اللغة",
-    html: ``
-  },
-  "vocab": {
-    title: "📚 مفردات اللغة",
-    html: ``
-  }
+  "bio": { title: "🔬 كيمياء + أحياء", url: "bio.html" },
+  "grammar": { title: "📝 قواعد اللغة", url: "grammar.html" },
+  "vocab": { title: "📚 مفردات اللغة", url: "vocab.html" }
 };
 
-function openApp(appKey) {
+async function openApp(appKey) {
   const app = APPS[appKey];
   if (!app) return;
-  
-  const doc = new DOMParser().parseFromString(app.html, 'text/html');
-  const appStyles = document.getElementById('appStyles');
-  appStyles.innerHTML = '';
-  doc.querySelectorAll('style').forEach(s => appStyles.appendChild(s.cloneNode(true)));
 
   const appContainer = document.getElementById('appContainer');
-  appContainer.innerHTML = doc.body.innerHTML;
+  const appStyles = document.getElementById('appStyles');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlayTitle');
 
-  doc.querySelectorAll('script').forEach(old => {
-    const ns = document.createElement('script');
-    if (old.src) { ns.src = old.src; }
-    else { ns.textContent = old.textContent; }
-    appContainer.appendChild(ns);
-  });
+  appContainer.innerHTML = "<div style='color:white;text-align:center;padding:50px;font-family:sans-serif;'>جاري تحميل الاختبار...</div>";
+  overlayTitle.textContent = app.title;
+  overlay.classList.add('active');
 
-  document.getElementById('overlayTitle').textContent = app.title;
-  document.getElementById('overlay').classList.add('active');
-  document.body.style.overflow = 'hidden';
+  try {
+    const response = await fetch(app.url);
+    if (!response.ok) throw new Error('تعذر العثور على ملف الاختبار');
+    
+    const htmlText = await response.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, 'text/html');
+
+    appStyles.innerHTML = '';
+    doc.querySelectorAll('style').forEach(s => appStyles.appendChild(s.cloneNode(true)));
+    appContainer.innerHTML = doc.body.innerHTML;
+
+    doc.querySelectorAll('script').forEach(oldScript => {
+      const newScript = document.createElement('script');
+      if (oldScript.src) {
+        newScript.src = oldScript.src;
+      } else {
+        newScript.textContent = oldScript.textContent;
+      }
+      appContainer.appendChild(newScript);
+    });
+
+    document.body.style.overflow = 'hidden';
+  } catch (error) {
+    console.error(error);
+    appContainer.innerHTML = "<div style='color:red;text-align:center;padding:50px;'>خطأ في تحميل الملف.</div>";
+  }
 }
 
 function closeApp() {
   document.getElementById('overlay').classList.remove('active');
+  document.body.style.overflow = 'auto';
   document.getElementById('appContainer').innerHTML = '';
   document.getElementById('appStyles').innerHTML = '';
-  document.body.style.overflow = '';
 }
 </script>
 
