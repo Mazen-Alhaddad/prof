@@ -1,9 +1,9 @@
 // ══════════════════════════════════════════════════
 //  Service Worker — Prof Quiz App
-//  الإصدار: v3 — Network First للصفحات، Cache First للملفات
+//  الإصدار: v4 — Cache First لجميع الملفات والصفحات
 // ══════════════════════════════════════════════════
 
-const CACHE_NAME = 'prof-quiz-v3';
+const CACHE_NAME = 'prof-quiz-v4';
 
 const PAGES = [
   './index.html',
@@ -13,7 +13,7 @@ const PAGES = [
   './manifest.json'
 ];
 
-// ── التثبيت: حفظ كل ملف بشكل منفرد (لا يفشل لو ملف واحد غير موجود) ──
+// ── التثبيت: حفظ كل ملف بشكل منفرد ──
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache =>
@@ -29,7 +29,7 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// ── التفعيل: حذف الكاشات القديمة ──────────────────────────────────────
+// ── التفعيل: حذف الكاشات القديمة ──
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -43,42 +43,30 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// ── الاعتراض ───────────────────────────────────────────────────────────
+// ── الاعتراض (Cache First Strategy) ──
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // صفحات HTML: الشبكة أولاً ← كاش ← index.html
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then(res => {
-          if (res && res.status === 200) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          }
-          return res;
-        })
-        .catch(() =>
-          caches.match(event.request)
-            .then(cached => cached || caches.match('./index.html'))
-        )
-    );
-    return;
-  }
-
-  // باقي الملفات: كاش أولاً ← شبكة
   event.respondWith(
     caches.match(event.request).then(cached => {
+      // 1. إذا كان الملف في الكاش، اعرضه فوراً (بدون إنترنت للأبد)
       if (cached) return cached;
+
+      // 2. إذا لم يكن في الكاش (أول زيارة)، اجلبه من الإنترنت واحفظه
       return fetch(event.request).then(res => {
         if (res && res.status === 200) {
           const clone = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return res;
+      }).catch(() => {
+        // 3. في حالة فشل الإنترنت والملف غير موجود أصلاً، حاول إعادة الشاشة الرئيسية
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
       });
     })
   );
