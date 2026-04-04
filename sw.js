@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prof-quiz-v5-force';
+const CACHE_NAME = 'prof-quiz-v6-ultimate';
 const ASSETS = [
   'index.html',
   'grammar.html',
@@ -7,15 +7,21 @@ const ASSETS = [
   'manifest.json'
 ];
 
-// 1. تثبيت وحفظ الملفات في "الخزنة" (Cache)
+// التثبيت: حفظ الملفات واحد تلو الآخر لضمان عدم الفشل
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then(cache => {
+      console.log('Installing Cache...');
+      return Promise.all(
+        ASSETS.map(url => {
+          return cache.add(url).catch(err => console.log('فشل تخزين:', url));
+        })
+      );
+    })
   );
   self.skipWaiting();
 });
 
-// 2. تفعيل وتنظيف أي نسخ قديمة
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys => Promise.all(
@@ -25,23 +31,25 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-// 3. الخدعة الكبرى: اعتراض التنقلات (Navigation Preload Bypass)
+// الاستراتيجية: ابحث في الكاش أولاً دائماً لملفات الـ HTML
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  const fileName = url.pathname.split('/').pop() || 'index.html';
+  const isHTML = e.request.mode === 'navigate' || url.pathname.endsWith('.html');
 
-  // إذا كان الملف المطلوب واحد من ملفاتنا الأربعة
-  if (ASSETS.includes(fileName)) {
+  if (isHTML) {
     e.respondWith(
-      caches.match(fileName).then(cachedResponse => {
-        // أرجعه من الكاش فوراً، حتى لو كان الإنترنت متاحاً (سرعة خيالية + ضمان أوفلاين)
-        return cachedResponse || fetch(e.request);
-      })
+      caches.match(e.request).then(res => {
+        // إذا وجده في الكاش أرجعه فوراً، وإلا اطلبه من الشبكة
+        return res || fetch(e.request);
+      }).catch(() => fetch(e.request))
     );
   } else {
-    // لأي ملفات أخرى (صور خارجية مثلاً)
     e.respondWith(
       caches.match(e.request).then(res => res || fetch(e.request))
+    );
+  }
+});
+
     );
   }
 });
