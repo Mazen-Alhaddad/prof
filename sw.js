@@ -1,12 +1,11 @@
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  Service Worker — Prof Quiz App
-//  استراتيجية: Cache First → Network Fallback
-// ══════════════════════════════════════════════
+//  الإصدار: v3 — Network First للصفحات، Cache First للملفات
+// ══════════════════════════════════════════════════
 
-const CACHE_NAME = 'prof-quiz-v2';
+const CACHE_NAME = 'prof-quiz-v3';
 
-const ASSETS = [
-  './',
+const PAGES = [
   './index.html',
   './grammar.html',
   './vocab.html',
@@ -14,60 +13,72 @@ const ASSETS = [
   './manifest.json'
 ];
 
-// ── التثبيت: تخزين جميع الملفات الأساسية ────────────────
+// ── التثبيت: حفظ كل ملف بشكل منفرد (لا يفشل لو ملف واحد غير موجود) ──
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS);
-    })
-  );
-  // تفعيل SW الجديد فوراً دون انتظار إغلاق التبويبات
-  self.skipWaiting();
-});
-
-// ── التفعيل: حذف النسخ القديمة من الكاش ─────────────────
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keyList =>
-      Promise.all(
-        keyList.map(key => {
-          if (key !== CACHE_NAME) {
-            console.log('[SW] حذف كاش قديم:', key);
-            return caches.delete(key);
-          }
-        })
+    caches.open(CACHE_NAME).then(cache =>
+      Promise.allSettled(
+        PAGES.map(page =>
+          cache.add(page).catch(err =>
+            console.warn('[SW] Could not cache:', page, err)
+          )
+        )
       )
     )
   );
-  // التحكم الفوري في جميع الصفحات المفتوحة
+  self.skipWaiting();
+});
+
+// ── التفعيل: حذف الكاشات القديمة ──────────────────────────────────────
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys
+          .filter(key => key !== CACHE_NAME)
+          .map(key => caches.delete(key))
+      )
+    )
+  );
   self.clients.claim();
 });
 
-// ── الاعتراض: Cache First مع Network Fallback ────────────
+// ── الاعتراض ───────────────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
-  // تجاهل الطلبات غير GET
   if (event.request.method !== 'GET') return;
-  // تجاهل الطلبات الخارجية (مثل CDN أيقونات)
-  if (!event.request.url.startsWith(self.location.origin)) return;
 
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+
+  // صفحات HTML: الشبكة أولاً ← كاش ← index.html
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(res => {
+          if (res && res.status === 200) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return res;
+        })
+        .catch(() =>
+          caches.match(event.request)
+            .then(cached => cached || caches.match('./index.html'))
+        )
+    );
+    return;
+  }
+
+  // باقي الملفات: كاش أولاً ← شبكة
   event.respondWith(
-    caches.match(event.request, { ignoreSearch: true }).then(cachedResponse => {
-
-      // ✅ موجود في الكاش → أرجعه فوراً (أسرع، يعمل أوفلاين)
-      if (cachedResponse) return cachedResponse;
-
-      // ❌ غير موجود → اجلبه من الإنترنت وخزّنه للمستقبل
-      return fetch(event.request).then(networkResponse => {
-        if (networkResponse && networkResponse.status === 200) {
-          const clone = networkResponse.clone();
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+      return fetch(event.request).then(res => {
+        if (res && res.status === 200) {
+          const clone = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
-        return networkResponse;
-      }).catch(() => {
-        // أوفلاين والملف غير مخزن → أعد توجيه لـ index.html
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html', { ignoreSearch: true });
-        }
+        return res;
       });
     })
   );
