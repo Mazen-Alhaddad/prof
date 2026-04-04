@@ -1,16 +1,21 @@
-const CACHE_NAME = 'prof-quiz-v11';
+const CACHE_NAME = 'prof-quiz-v12';
 
-const URL_MAP = {
-  '/':        '/index.html',
-  '/index':   '/index.html',
-  '/grammar': '/grammar.html',
-  '/vocab':   '/vocab.html',
-  '/bio':     '/bio.html',
-};
+const ASSETS_TO_CACHE = [
+  './',
+  './index.html',
+  './grammar.html',
+  './vocab.html',
+  './bio.html',
+  './manifest.json'
+];
 
-// التثبيت: بدون pre-cache، نخزّن عند الطلب فقط
 self.addEventListener('install', e => {
   self.skipWaiting();
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(ASSETS_TO_CACHE);
+    })
+  );
 });
 
 self.addEventListener('activate', e => {
@@ -22,32 +27,29 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if (!e.request.url.startsWith(self.location.origin)) return;
   if (e.request.method !== 'GET') return;
-
-  const pathname = new URL(e.request.url).pathname;
-  const mapped = URL_MAP[pathname] || pathname;
-  const finalUrl = self.location.origin + mapped;
+  if (!e.request.url.startsWith(self.location.origin)) return;
 
   e.respondWith(
-    caches.match(finalUrl).then(cached => {
+    caches.match(e.request).then(cached => {
       if (cached) {
-        // رجّع من الكاش وحدّثه في الخلفية
-        fetch(finalUrl).then(res => {
-          if (res && res.status === 200)
-            caches.open(CACHE_NAME).then(c => c.put(finalUrl, res));
+        fetch(e.request).then(res => {
+          if (res && res.status === 200) {
+            caches.open(CACHE_NAME).then(c => c.put(e.request, res));
+          }
         }).catch(() => {});
         return cached;
       }
 
-      // غير موجود في الكاش، اجلبه واحفظه
-      return fetch(finalUrl).then(res => {
+      return fetch(e.request).then(res => {
         if (res && res.status === 200) {
           const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(finalUrl, clone));
+          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
         }
         return res;
-      }).catch(() => caches.match('/index.html'));
+      }).catch(() => {
+        console.error('Offline and file not cached:', e.request.url);
+      });
     })
   );
 });
