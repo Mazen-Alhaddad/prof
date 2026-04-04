@@ -1,79 +1,65 @@
-const CACHE_NAME = 'prof-quiz-v6-ultimate';
+const CACHE_NAME = 'prof-quiz-v7';
 const ASSETS = [
-  'index.html',
-  'grammar.html',
-  'vocab.html',
-  'bio.html',
-  'manifest.json'
+  './',
+  './index.html',
+  './grammar.html',
+  './vocab.html',
+  './bio.html',
+  './manifest.json'
 ];
 
-// التثبيت: حفظ الملفات واحد تلو الآخر لضمان عدم الفشل
+// التثبيت: حفظ جميع الملفات في الكاش
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log('Installing Cache...');
+      console.log('[SW] تخزين الملفات...');
       return Promise.all(
-        ASSETS.map(url => {
-          return cache.add(url).catch(err => console.log('فشل تخزين:', url));
-        })
+        ASSETS.map(url =>
+          cache.add(url).catch(err => console.warn('[SW] فشل تخزين:', url, err))
+        )
       );
     })
   );
   self.skipWaiting();
 });
 
+// التفعيل: حذف الكاش القديم
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.map(key => key !== CACHE_NAME ? caches.delete(key) : null)
-    ))
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.map(key => {
+          if (key !== CACHE_NAME) {
+            console.log('[SW] حذف كاش قديم:', key);
+            return caches.delete(key);
+          }
+        })
+      )
+    )
   );
   self.clients.claim();
 });
 
-// الاستراتيجية: ابحث في الكاش أولاً دائماً لملفات الـ HTML
+// الاستراتيجية: الكاش أولاً دائماً (Cache First)
 self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-  const isHTML = e.request.mode === 'navigate' || url.pathname.endsWith('.html');
+  // تجاهل الطلبات من خارج الموقع
+  if (!e.request.url.startsWith(self.location.origin)) return;
 
-  if (isHTML) {
-    e.respondWith(
-      caches.match(e.request).then(res => {
-        // إذا وجده في الكاش أرجعه فوراً، وإلا اطلبه من الشبكة
-        return res || fetch(e.request);
-      }).catch(() => fetch(e.request))
-    );
-  } else {
-    e.respondWith(
-      caches.match(e.request).then(res => res || fetch(e.request))
-    );
-  }
-});
-
-    );
-  }
-});
-
-  }
-});
- new URL(event.request.url);
-  if (url.origin !== self.location.origin) return;
-
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      // 1. إذا كان الملف في الكاش، اعرضه فوراً (بدون إنترنت للأبد)
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      // إذا كان الملف في الكاش → أرجعه فوراً بدون إنترنت
       if (cached) return cached;
 
-      // 2. إذا لم يكن في الكاش (أول زيارة)، اجلبه من الإنترنت واحفظه
-      return fetch(event.request).then(res => {
+      // إذا لم يكن في الكاش → اجلبه من الإنترنت واحفظه للمرة القادمة
+      return fetch(e.request).then(res => {
         if (res && res.status === 200) {
           const clone = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
         }
         return res;
       }).catch(() => {
-        // 3. في حالة فشل الإنترنت والملف غير موجود أصلاً، حاول إعادة الشاشة الرئيسية
-        if (event.request.mode === 'navigate') {
+        // إذا فشل الإنترنت والملف غير موجود → أعد الصفحة الرئيسية
+        if (e.request.mode === 'navigate') {
           return caches.match('./index.html');
         }
       });
