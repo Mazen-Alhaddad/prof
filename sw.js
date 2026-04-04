@@ -1,6 +1,5 @@
-const CACHE_NAME = 'prof-quiz-v8';
+const CACHE_NAME = 'prof-quiz-v9';
 
-// الملفات الأساسية للتخزين المسبق
 const ASSETS = [
   './',
   './index.html',
@@ -10,83 +9,85 @@ const ASSETS = [
   './manifest.json'
 ];
 
-// خريطة تحويل مسارات Cloudflare → الملف الفعلي
 const URL_MAP = {
-  '/':        './index.html',
-  '/index':   './index.html',
-  '/grammar': './grammar.html',
-  '/vocab':   './vocab.html',
-  '/bio':     './bio.html',
+  '/':          '/index.html',
+  '/index':     '/index.html',
+  '/index.html':'/index.html',
+  '/grammar':   '/grammar.html',
+  '/grammar.html':'/grammar.html',
+  '/vocab':     '/vocab.html',
+  '/vocab.html':'/vocab.html',
+  '/bio':       '/bio.html',
+  '/bio.html':  '/bio.html',
 };
 
-// التثبيت: حفظ جميع الملفات في الكاش
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
+    caches.open(CACHE_NAME).then(async cache => {
       console.log('[SW] تخزين الملفات...');
-      return Promise.all(
-        ASSETS.map(url =>
-          cache.add(url).catch(err => console.warn('[SW] فشل تخزين:', url, err))
-        )
-      );
+      // خزّن الملفات الأصلية
+      for (const url of ASSETS) {
+        try {
+          const res = await fetch(url);
+          if (res.ok) {
+            // خزّن الملف تحت المسار الأصلي وكذلك بدون .html
+            await cache.put(url, res.clone());
+            const noExt = url.replace('.html', '').replace('./', '/');
+            await cache.put(noExt, res.clone());
+            console.log('[SW] تم حفظ:', url, 'و', noExt);
+          }
+        } catch(err) {
+          console.warn('[SW] فشل تخزين:', url, err);
+        }
+      }
     })
   );
   self.skipWaiting();
 });
 
-// التفعيل: حذف الكاش القديم
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.map(key => {
-        if (key !== CACHE_NAME) {
-          console.log('[SW] حذف كاش قديم:', key);
-          return caches.delete(key);
-        }
+        if (key !== CACHE_NAME) return caches.delete(key);
       }))
     )
   );
   self.clients.claim();
 });
 
-// دالة تحويل المسار: /grammar → ./grammar.html
-function resolveUrl(request) {
-  const url = new URL(request.url);
-  const pathname = url.pathname.replace(/\/$/, '') || '/';
-
-  if (URL_MAP[pathname]) {
-    return new Request(new URL(URL_MAP[pathname], self.location.origin).href);
-  }
-  return request;
-}
-
-// الاستراتيجية: الكاش أولاً دائماً (Cache First)
 self.addEventListener('fetch', e => {
   if (!e.request.url.startsWith(self.location.origin)) return;
 
-  const resolvedRequest = resolveUrl(e.request);
+  const url = new URL(e.request.url);
+  const pathname = url.pathname;
+
+  // حوّل المسار للملف الفعلي
+  const mapped = URL_MAP[pathname] || pathname;
+  const resolvedUrl = new URL(mapped, self.location.origin).href;
+  const resolvedRequest = new Request(resolvedUrl);
 
   e.respondWith(
-    caches.match(resolvedRequest).then(cached => {
-      if (cached) return cached;
+    // جرّب المسار المحوَّل أولاً
+    caches.match(resolvedRequest)
+      .then(cached => cached || caches.match(e.request))
+      .then(cached => {
+        if (cached) return cached;
 
-      // جرّب المسار الأصلي أيضاً
-      return caches.match(e.request).then(cached2 => {
-        if (cached2) return cached2;
-
-        // غير موجود → اجلبه من الإنترنت واحفظه
-        return fetch(resolvedRequest).then(res => {
+        // غير موجود في الكاش → اجلبه واحفظه
+        return fetch(e.request).then(res => {
           if (res && res.status === 200) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(resolvedRequest, clone));
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(resolvedRequest, res.clone());
+              cache.put(e.request, res.clone());
+            });
           }
           return res;
         }).catch(() => {
           if (e.request.mode === 'navigate') {
-            return caches.match('./index.html');
+            return caches.match('/index.html');
           }
         });
-      });
-    })
+      })
   );
 });
