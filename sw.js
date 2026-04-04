@@ -1,53 +1,55 @@
-// ══════════════════════════════════════════════════
-//  Service Worker — Prof Quiz App
-//  الإصدار: v4 — Cache First لجميع الملفات والصفحات
-// ══════════════════════════════════════════════════
-
-const CACHE_NAME = 'prof-quiz-v4';
-
-const PAGES = [
-  './index.html',
-  './grammar.html',
-  './vocab.html',
-  './bio.html',
-  './manifest.json'
+const CACHE_NAME = 'prof-quiz-v4-final';
+const ASSETS = [
+  'index.html',
+  'grammar.html',
+  'vocab.html',
+  'bio.html',
+  'manifest.json'
 ];
 
-// ── التثبيت: حفظ كل ملف بشكل منفرد ──
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache =>
-      Promise.allSettled(
-        PAGES.map(page =>
-          cache.add(page).catch(err =>
-            console.warn('[SW] Could not cache:', page, err)
-          )
-        )
-      )
-    )
+// 1. التثبيت وحفظ الملفات بقوة
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      console.log('Caching all assets');
+      return cache.addAll(ASSETS);
+    })
   );
   self.skipWaiting();
 });
 
-// ── التفعيل: حذف الكاشات القديمة ──
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(key => key !== CACHE_NAME)
-          .map(key => caches.delete(key))
-      )
-    )
+// 2. تفعيل وتنظيف الكاش القديم
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.map(key => {
+        if (key !== CACHE_NAME) return caches.delete(key);
+      })
+    ))
   );
   self.clients.claim();
 });
 
-// ── الاعتراض (Cache First Strategy) ──
-self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') return;
+// 3. الاستراتيجية الذكية: اعتراض طلبات التنقل
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
 
-  const url = new URL(event.request.url);
+  // إذا كان المستخدم يطلب إحدى صفحات التطبيق
+  if (ASSETS.includes(url.pathname.split('/').pop())) {
+    e.respondWith(
+      caches.match(e.request, { ignoreSearch: true }).then(response => {
+        // إذا وجدها في الكاش، أرجعها فوراً (حتى لو في إنترنت) لضمان السرعة والأوفلاين
+        return response || fetch(e.request);
+      })
+    );
+  } else {
+    // باقي الملفات (صور، فونتات..)
+    e.respondWith(
+      caches.match(e.request).then(res => res || fetch(e.request))
+    );
+  }
+});
+ new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
