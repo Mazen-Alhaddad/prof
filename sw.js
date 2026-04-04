@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prof-quiz-v4-final';
+const CACHE_NAME = 'prof-quiz-v5-force';
 const ASSETS = [
   'index.html',
   'grammar.html',
@@ -7,46 +7,45 @@ const ASSETS = [
   'manifest.json'
 ];
 
-// 1. التثبيت وحفظ الملفات بقوة
+// 1. تثبيت وحفظ الملفات في "الخزنة" (Cache)
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('Caching all assets');
-      return cache.addAll(ASSETS);
-    })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
   );
   self.skipWaiting();
 });
 
-// 2. تفعيل وتنظيف الكاش القديم
+// 2. تفعيل وتنظيف أي نسخ قديمة
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys => Promise.all(
-      keys.map(key => {
-        if (key !== CACHE_NAME) return caches.delete(key);
-      })
+      keys.map(key => key !== CACHE_NAME ? caches.delete(key) : null)
     ))
   );
   self.clients.claim();
 });
 
-// 3. الاستراتيجية الذكية: اعتراض طلبات التنقل
+// 3. الخدعة الكبرى: اعتراض التنقلات (Navigation Preload Bypass)
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+  const fileName = url.pathname.split('/').pop() || 'index.html';
 
-  // إذا كان المستخدم يطلب إحدى صفحات التطبيق
-  if (ASSETS.includes(url.pathname.split('/').pop())) {
+  // إذا كان الملف المطلوب واحد من ملفاتنا الأربعة
+  if (ASSETS.includes(fileName)) {
     e.respondWith(
-      caches.match(e.request, { ignoreSearch: true }).then(response => {
-        // إذا وجدها في الكاش، أرجعها فوراً (حتى لو في إنترنت) لضمان السرعة والأوفلاين
-        return response || fetch(e.request);
+      caches.match(fileName).then(cachedResponse => {
+        // أرجعه من الكاش فوراً، حتى لو كان الإنترنت متاحاً (سرعة خيالية + ضمان أوفلاين)
+        return cachedResponse || fetch(e.request);
       })
     );
   } else {
-    // باقي الملفات (صور، فونتات..)
+    // لأي ملفات أخرى (صور خارجية مثلاً)
     e.respondWith(
       caches.match(e.request).then(res => res || fetch(e.request))
     );
+  }
+});
+
   }
 });
  new URL(event.request.url);
