@@ -1,6 +1,6 @@
-const CACHE_NAME = 'prof-quiz-v12';
+const CACHE_NAME = 'prof-quiz-v10'; // تم تغيير الإصدار لتحديث الكاش القديم
 
-const ASSETS_TO_CACHE = [
+const ASSETS = [
   './',
   './index.html',
   './grammar.html',
@@ -9,46 +9,54 @@ const ASSETS_TO_CACHE = [
   './manifest.json'
 ];
 
+// 1. تثبيت الخدمة وحفظ الملفات الأساسية
 self.addEventListener('install', e => {
-  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      console.log('[SW] جاري تخزين الملفات الأساسية...');
+      return cache.addAll(ASSETS);
     })
   );
+  // إجبار المتصفح على تفعيل هذه النسخة فوراً
+  self.skipWaiting(); 
 });
 
+// 2. تنظيف الكاش القديم عند التحديث
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys().then(keys => Promise.all(
+      keys.map(key => {
+        if (key !== CACHE_NAME) {
+          console.log('[SW] تم مسح الكاش القديم:', key);
+          return caches.delete(key);
+        }
+      })
+    ))
   );
+  self.clients.claim();
 });
 
+// 3. اعتراض الطلبات وجلبها من الكاش أوفلاين
 self.addEventListener('fetch', e => {
+  // تجاهل الطلبات التي ليست GET (مثل إرسال بيانات Form)
   if (e.request.method !== 'GET') return;
-  if (!e.request.url.startsWith(self.location.origin)) return;
 
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) {
-        fetch(e.request).then(res => {
-          if (res && res.status === 200) {
-            caches.open(CACHE_NAME).then(c => c.put(e.request, res));
-          }
-        }).catch(() => {});
-        return cached;
-      }
+    caches.match(e.request, { ignoreSearch: true }).then(cachedRes => {
+      // وجدناه في الكاش؟ أرجعه فوراً
+      if (cachedRes) return cachedRes;
 
-      return fetch(e.request).then(res => {
-        if (res && res.status === 200) {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-        }
-        return res;
+      // لم نجده؟ اطلبه من الإنترنت، ثم احفظ نسخة منه في الكاش للمستقبل
+      return fetch(e.request).then(fetchRes => {
+        return caches.open(CACHE_NAME).then(cache => {
+          cache.put(e.request.url, fetchRes.clone());
+          return fetchRes;
+        });
       }).catch(() => {
-        console.error('Offline and file not cached:', e.request.url);
+        // في حال انقطاع الإنترنت التام وعدم وجود الملف، أعد الصفحة الرئيسية
+        if (e.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
       });
     })
   );
