@@ -191,9 +191,9 @@ document.head.appendChild(manifestLink);
 
 <script>
 const APPS = {
-  "bio": { title: "🔬 كيمياء + أحياء", url: "bio.html" },
-  "grammar": { title: "📝 قواعد اللغة", url: "grammar.html" },
-  "vocab": { title: "📚 مفردات اللغة", url: "vocab.html" }
+  "bio": { title: "🔬 كيمياء + أحياء", url: "/bio" },
+  "grammar": { title: "📝 قواعد اللغة", url: "/grammar" },
+  "vocab": { title: "📚 مفردات اللغة", url: "/vocab" }
 };
 
 function openApp(appKey) {
@@ -218,5 +218,14 @@ if ('serviceWorker' in navigator) {
 
 </script>
 
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js")
+      .then(reg => console.log("✅ SW registered"))
+      .catch(err => console.error("❌ SW error:", err));
+  });
+}
+</script>
 </body>
 </html>
