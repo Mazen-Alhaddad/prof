@@ -909,6 +909,14 @@ function onShuffleToggle() {
   if (lbl) {
     lbl.textContent = shuffleEnabled ? 'عشوائي 🔀' : 'مرتب 📋';
   }
+  // إذا كانت الجلسة نشطة، أعد ترتيب الأسئلة غير المُجابة فقط
+  if (qs && qs.length > 0 && DATA) {
+    const answeredQs = qs.slice(0, ci + 1); // الأسئلة المجابة (حتى السؤال الحالي)
+    const unansweredQs = qs.slice(ci + 1);  // الأسئلة غير المجابة
+    const reordered = shuffleEnabled ? shuffle(unansweredQs) : unansweredQs;
+    qs = [...answeredQs, ...reordered];
+    // أعد بناء cache بحيث لا يتأثر
+  }
   toast(shuffleEnabled ? '🔀 الترتيب العشوائي مفعّل' : '📋 الأسئلة بالترتيب الأصلي', '');
 }
 function toggleNCTText(checkbox) {
@@ -1067,6 +1075,76 @@ function doDiscard() {
   $('resumeBanner').classList.remove('show');
   initQuiz();
 }
+function generateProgressCode(sess) {
+  const d = sess.data;
+  const answeredIndices = Object.keys(d.cache || {}).filter(k => d.cache[k].chosen !== undefined).map(Number);
+  const payload = {
+    v: 1, id: sess.id, name: sess.name,
+    ci: d.ci, ok: d.ok, er: d.er,
+    answered: answeredIndices, choices: {}, subject: d.subject
+  };
+  answeredIndices.forEach(idx => {
+    const c = d.cache[idx];
+    if (c) payload.choices[idx] = { ch: c.chosen, ok: c.correct ? 1 : 0 };
+  });
+  return btoa(encodeURIComponent(JSON.stringify(payload)));
+}
+function fallbackCopyText(text, cb) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+  if (cb) cb();
+}
+function copyProgressCode(sessionId) {
+  const sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
+  const sess = sessions.find(s => s.id === sessionId);
+  if (!sess) return;
+  const code = generateProgressCode(sess);
+  function onSuccess() {
+    const btn = document.getElementById('btnCopyCode_' + sessionId);
+    if (btn) { btn.textContent = '✅ تم'; setTimeout(() => btn.textContent = '📋 رمز', 2000); }
+    toast('📋 تم نسخ رمز التقدم', 'g');
+  }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(code).then(onSuccess).catch(() => fallbackCopyText(code, onSuccess));
+  } else { fallbackCopyText(code, onSuccess); }
+}
+function pasteProgressCode(sessionId) {
+  const input = prompt('الصق رمز التقدم هنا:');
+  if (!input) return;
+  applyCodeToSession(input.trim(), sessionId);
+}
+function restoreFromCode() {
+  const input = $('pasteCodeInput');
+  if (!input || !input.value.trim()) { toast('⚠️ أدخل الرمز أولاً', 'r'); return; }
+  applyCodeToSession(input.value.trim(), null);
+}
+function applyCodeToSession(code, targetSessionId) {
+  try {
+    const payload = JSON.parse(decodeURIComponent(atob(code)));
+    if (!payload || payload.v !== 1) { toast('❌ الرمز غير صحيح', 'r'); return; }
+    let sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
+    const sid = targetSessionId || payload.id;
+    const idx = sessions.findIndex(s => s.id === sid);
+    if (idx === -1) { toast('⚠️ لم يتم العثور على الجلسة. أعد تحميل الجلسة أولاً.', 'r'); return; }
+    sessions[idx].data.ci = payload.ci || 0;
+    sessions[idx].data.ok = payload.ok || 0;
+    sessions[idx].data.er = payload.er || 0;
+    if (payload.choices) {
+      const restoredCache = sessions[idx].data.cache || {};
+      Object.entries(payload.choices).forEach(([k, v]) => {
+        if (!restoredCache[k]) restoredCache[k] = {};
+        restoredCache[k].chosen = v.ch;
+        restoredCache[k].correct = v.ok === 1;
+      });
+      sessions[idx].data.cache = restoredCache;
+    }
+    try { localStorage.setItem('crescent_bio_sessions', JSON.stringify(sessions)); } catch(e) {}
+    toast('✅ تم استعادة التقدم من الرمز', 'g');
+    showSessionsModal();
+  } catch(e) { toast('❌ الرمز غير صالح أو تالف', 'r'); }
+}
 function showSessionsModal() {
   const sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
   const listDiv = $('sessionsList');
@@ -1078,20 +1156,31 @@ function showSessionsModal() {
       const progress = sess.data.ci + 1;
       const total = sess.data.qs.length;
       const itemDiv = document.createElement('div');
-      itemDiv.style.cssText = 'background:var(--elevated);border:1px solid var(--border);border-radius:var(--rs);padding:12px;';
+      itemDiv.style.cssText = 'background:var(--elevated);border:1px solid var(--border);border-radius:var(--rs);padding:12px;margin-bottom:6px;';
       itemDiv.innerHTML = `
-        <div style="margin-bottom:12px;text-align:right;">
-          <div style="font-weight:bold;color:var(--blue);margin-bottom:5px;font-family:Consolas,monospace;">${sess.name}</div>
+        <div style="margin-bottom:10px;text-align:right;">
+          <div style="font-weight:bold;color:var(--blue);margin-bottom:4px;font-family:Consolas,monospace;">${sess.name}</div>
           <div style="font-size:12px;color:var(--t2);">المادة: ${sess.data.subject} | التقدم: ${progress} من ${total}</div>
         </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button class="btn-nav" style="background:var(--green2);color:white;border:none;padding:6px 12px;" onclick="loadSpecificSession('${sess.id}')">استعادة</button>
-          <button class="btn-nav" style="padding:6px 12px;" onclick="restartSpecificSession('${sess.id}')">إعادة</button>
-          <button class="btn-nav" style="border-color:var(--red);color:var(--red);padding:6px 12px;" onclick="deleteSpecificSession('${sess.id}')">حذف</button>
+        <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+          <button class="btn-nav" style="background:var(--green2);color:white;border:none;padding:5px 11px;font-size:0.72rem;" onclick="loadSpecificSession('${sess.id}')">استعادة</button>
+          <button class="btn-nav" style="padding:5px 11px;font-size:0.72rem;" onclick="restartSpecificSession('${sess.id}')">إعادة</button>
+          <button class="btn-nav" id="btnCopyCode_${sess.id}" style="padding:5px 9px;font-size:0.72rem;border-color:var(--purple);color:var(--purple);" onclick="copyProgressCode('${sess.id}')" title="نسخ رمز التقدم">📋 رمز</button>
+          <button class="btn-nav" style="padding:5px 9px;font-size:0.72rem;border-color:var(--blue);color:var(--blue);" onclick="pasteProgressCode('${sess.id}')" title="لصق رمز تقدم لاستعادته">📥 لصق</button>
+          <button class="btn-nav" style="border-color:var(--red);color:var(--red);padding:5px 11px;font-size:0.72rem;" onclick="deleteSpecificSession('${sess.id}')">حذف</button>
         </div>`;
       listDiv.appendChild(itemDiv);
     });
   }
+  const restoreDiv = document.createElement('div');
+  restoreDiv.style.cssText = 'margin-top:10px;border-top:1px solid var(--border);padding-top:10px;';
+  restoreDiv.innerHTML = `
+    <div style="font-size:0.7rem;color:var(--t3);margin-bottom:7px;font-family:Consolas,monospace;">استعادة من رمز (بعد مسح التخزين):</div>
+    <div style="display:flex;gap:8px;">
+      <input id="pasteCodeInput" type="text" placeholder="الصق الرمز هنا..." style="flex:1;background:var(--elevated);border:1px solid var(--border);border-radius:var(--rs);padding:6px 10px;color:var(--t1);font-family:Consolas,monospace;font-size:0.7rem;outline:none;">
+      <button class="btn-nav" style="border-color:var(--green);color:var(--green);padding:6px 12px;font-size:0.72rem;" onclick="restoreFromCode()">استعادة</button>
+    </div>`;
+  listDiv.appendChild(restoreDiv);
   $('sessionsModal').classList.add('show');
 }
 function closeSessionsModal() {

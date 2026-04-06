@@ -299,7 +299,16 @@ function $(id){return document.getElementById(id);}
 function onShuffleToggle(){
   shuffleEnabled=$('shuffleCheck').checked;
   $('shuffleStatusLbl').textContent=shuffleEnabled?'عشوائي 🔀':'مرتب 📋';
-  if(DATA_RAW){load(DATA_RAW);}
+  // إعادة ترتيب الأسئلة غير المُجابة فقط للحفاظ على التقدم
+  if(qs && qs.length > 0){
+    var answeredQs = qs.slice(0, ci + 1);
+    var unansweredQs = qs.slice(ci + 1);
+    var reordered = shuffleEnabled ? shuffle(unansweredQs.slice()) : unansweredQs;
+    qs = answeredQs.concat(reordered);
+    toast(shuffleEnabled?'🔀 الترتيب العشوائي مفعّل':'📋 الترتيب الأصلي','');
+  } else if(DATA_RAW){
+    load(DATA_RAW);
+  }
 }
 $('fileInput').addEventListener('change',function(e){
   var file=e.target.files[0]; if(!file)return;
@@ -624,6 +633,50 @@ function save(){
   }
   try{localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions));}catch(e){}
 }
+function generateProgressCode(sess){
+  var d=sess.data;
+  var answeredKeys=Object.keys(d.cache||{}).filter(function(k){return d.cache[k]&&d.cache[k].chosen!==undefined;});
+  var payload={v:1,id:sess.id,name:sess.name,ci:d.ci,ok:d.ok,er:d.er,choices:{}};
+  answeredKeys.forEach(function(k){var c=d.cache[k];if(c)payload.choices[k]={ch:c.chosen};});
+  return btoa(encodeURIComponent(JSON.stringify(payload)));
+}
+function fallbackCopyText(text,cb){
+  var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;top:-9999px;left:-9999px;opacity:0;';
+  document.body.appendChild(ta);ta.focus();ta.select();document.execCommand('copy');document.body.removeChild(ta);if(cb)cb();
+}
+function copyProgressCode(sid){
+  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
+  var sess=sessions.find(function(s){return s.id===sid;});if(!sess)return;
+  var code=generateProgressCode(sess);
+  function onSuccess(){var btn=document.getElementById('btnCopyCode_'+sid);if(btn){btn.textContent='✅ تم';setTimeout(function(){btn.textContent='📋 رمز';},2000);}toast('📋 تم نسخ رمز التقدم','g');}
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(code).then(onSuccess).catch(function(){fallbackCopyText(code,onSuccess);});}
+  else{fallbackCopyText(code,onSuccess);}
+}
+function pasteProgressCode(sid){
+  var input=prompt('الصق رمز التقدم هنا:');if(!input)return;applyCodeToSession(input.trim(),sid);
+}
+function restoreFromCode(){
+  var input=$('pasteCodeInput');if(!input||!input.value.trim()){toast('⚠️ أدخل الرمز أولاً','r');return;}
+  applyCodeToSession(input.value.trim(),null);
+}
+function applyCodeToSession(code,targetSid){
+  try{
+    var payload=JSON.parse(decodeURIComponent(atob(code)));
+    if(!payload||payload.v!==1){toast('❌ الرمز غير صحيح','r');return;}
+    var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
+    var sid=targetSid||payload.id;
+    var idx=sessions.findIndex(function(s){return s.id===sid;});
+    if(idx===-1){toast('⚠️ لم يتم العثور على الجلسة','r');return;}
+    sessions[idx].data.ci=payload.ci||0;sessions[idx].data.ok=payload.ok||0;sessions[idx].data.er=payload.er||0;
+    if(payload.choices){
+      var rc=sessions[idx].data.cache||{};
+      Object.keys(payload.choices).forEach(function(k){if(!rc[k])rc[k]={};rc[k].chosen=payload.choices[k].ch;});
+      sessions[idx].data.cache=rc;
+    }
+    try{localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions));}catch(e){}
+    toast('✅ تم استعادة التقدم من الرمز','g');showSessionsModal();
+  }catch(e){toast('❌ الرمز غير صالح أو تالف','r');}
+}
 function showSessionsModal(){
   var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
   var listDiv=$('sessionsList'); listDiv.innerHTML='';
@@ -631,18 +684,23 @@ function showSessionsModal(){
   else{
     [...sessions].reverse().forEach(function(sess){
       var prog=sess.data.ci+1, tot=sess.data.qs.length;
-      var item=document.createElement('div'); item.style.cssText='background:var(--elevated);border:1px solid var(--border);border-radius:6px;padding:12px;';
-      var info=document.createElement('div'); info.style.cssText='margin-bottom:8px;font-weight:bold;color:var(--blue);'; info.textContent=sess.name;
-      var meta=document.createElement('div'); meta.style.cssText='font-size:12px;color:var(--t2);margin-bottom:8px;'; meta.textContent='التقدم: '+prog+' / '+tot;
-      var row=document.createElement('div'); row.style.cssText='display:flex;gap:8px;';
-      var bLoad=document.createElement('button'); bLoad.style.cssText='background:var(--green2);color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;'; bLoad.textContent='استعادة'; bLoad.onclick=(function(id){return function(){loadSpecificSession(id);};})(sess.id);
-      var bRestart=document.createElement('button'); bRestart.style.cssText='background:none;border:1px solid var(--border);color:var(--t2);padding:5px 10px;border-radius:4px;cursor:pointer;'; bRestart.textContent='إعادة'; bRestart.onclick=(function(id){return function(){restartSpecificSession(id);};})(sess.id);
-      var bDel=document.createElement('button'); bDel.style.cssText='background:none;border:1px solid var(--red);color:var(--red);padding:5px 10px;border-radius:4px;cursor:pointer;'; bDel.textContent='حذف'; bDel.onclick=(function(id){return function(){deleteSpecificSession(id);};})(sess.id);
-      row.appendChild(bLoad); row.appendChild(bRestart); row.appendChild(bDel);
+      var item=document.createElement('div'); item.style.cssText='background:var(--elevated);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:6px;';
+      var info=document.createElement('div'); info.style.cssText='margin-bottom:6px;font-weight:bold;color:var(--blue);font-size:0.8rem;'; info.textContent=sess.name;
+      var meta=document.createElement('div'); meta.style.cssText='font-size:11px;color:var(--t2);margin-bottom:8px;'; meta.textContent='التقدم: '+prog+' / '+tot;
+      var row=document.createElement('div'); row.style.cssText='display:flex;gap:6px;flex-wrap:wrap;';
+      var bLoad=document.createElement('button'); bLoad.style.cssText='background:var(--green2);color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:0.72rem;'; bLoad.textContent='استعادة'; bLoad.onclick=(function(id){return function(){loadSpecificSession(id);};})(sess.id);
+      var bRestart=document.createElement('button'); bRestart.style.cssText='background:none;border:1px solid var(--border);color:var(--t2);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:0.72rem;'; bRestart.textContent='إعادة'; bRestart.onclick=(function(id){return function(){restartSpecificSession(id);};})(sess.id);
+      var bCopy=document.createElement('button'); bCopy.id='btnCopyCode_'+sess.id; bCopy.style.cssText='background:none;border:1px solid var(--purple);color:var(--purple);padding:5px 9px;border-radius:4px;cursor:pointer;font-size:0.72rem;'; bCopy.textContent='📋 رمز'; bCopy.title='نسخ رمز التقدم'; bCopy.onclick=(function(id){return function(){copyProgressCode(id);};})(sess.id);
+      var bPaste=document.createElement('button'); bPaste.style.cssText='background:none;border:1px solid var(--blue);color:var(--blue);padding:5px 9px;border-radius:4px;cursor:pointer;font-size:0.72rem;'; bPaste.textContent='📥 لصق'; bPaste.title='لصق رمز تقدم'; bPaste.onclick=(function(id){return function(){pasteProgressCode(id);};})(sess.id);
+      var bDel=document.createElement('button'); bDel.style.cssText='background:none;border:1px solid var(--red);color:var(--red);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:0.72rem;'; bDel.textContent='حذف'; bDel.onclick=(function(id){return function(){deleteSpecificSession(id);};})(sess.id);
+      row.appendChild(bLoad); row.appendChild(bRestart); row.appendChild(bCopy); row.appendChild(bPaste); row.appendChild(bDel);
       item.appendChild(info); item.appendChild(meta); item.appendChild(row);
       listDiv.appendChild(item);
     });
   }
+  var restoreDiv=document.createElement('div'); restoreDiv.style.cssText='margin-top:10px;border-top:1px solid var(--border);padding-top:10px;';
+  restoreDiv.innerHTML='<div style="font-size:0.68rem;color:var(--t3);margin-bottom:7px;font-family:Consolas,monospace;">استعادة من رمز (بعد مسح التخزين):</div><div style="display:flex;gap:8px;"><input id="pasteCodeInput" type="text" placeholder="الصق الرمز هنا..." style="flex:1;background:var(--elevated);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--t1);font-family:Consolas,monospace;font-size:0.68rem;outline:none;"><button style="background:none;border:1px solid var(--green);color:var(--green);padding:6px 12px;border-radius:4px;cursor:pointer;font-size:0.72rem;" onclick="restoreFromCode()">استعادة</button></div>';
+  listDiv.appendChild(restoreDiv);
   $('sessionsModal').classList.add('show');
 }
 function closeSessionsModal(){$('sessionsModal').classList.remove('show');}

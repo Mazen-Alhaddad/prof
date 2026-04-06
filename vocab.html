@@ -1056,19 +1056,81 @@ function loadSavedState() {
   if(sessions.length>0){ $('resumeInfo').textContent='لديك '+sessions.length+' جلسة محفوظة.'; $('resumeBanner').classList.add('show'); return true; }
   return false;
 }
+function generateProgressCode(sess){
+  var d=sess.data;
+  var answeredKeys=Object.keys(d.answersCache||{}).filter(function(k){return d.answersCache[k]&&d.answersCache[k].knew!==undefined;});
+  var payload={v:1,id:sess.id,name:sess.name,ci:d.currentIndex||0,correct:d.correctCount||0,wrong:d.wrongCount||0,posErr:d.posErrorCount||0,choices:{}};
+  answeredKeys.forEach(function(k){var c=d.answersCache[k];if(c)payload.choices[k]={knew:c.knew?1:0,pos:c.posSelected||null};});
+  return btoa(encodeURIComponent(JSON.stringify(payload)));
+}
+function fallbackCopyText(text,cb){
+  var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;top:-9999px;left:-9999px;opacity:0;';
+  document.body.appendChild(ta);ta.focus();ta.select();document.execCommand('copy');document.body.removeChild(ta);if(cb)cb();
+}
+function copyProgressCode(sid){
+  var sessions=JSON.parse(localStorage.getItem('vocab_sessions_list')||'[]');
+  var sess=sessions.find(function(s){return s.id===sid;});if(!sess)return;
+  var code=generateProgressCode(sess);
+  function onSuccess(){var btn=document.getElementById('btnCopyCode_'+sid);if(btn){btn.textContent='✅ تم';setTimeout(function(){btn.textContent='📋 رمز';},2000);}showToast('📋 تم نسخ رمز التقدم','green');}
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(code).then(onSuccess).catch(function(){fallbackCopyText(code,onSuccess);});}
+  else{fallbackCopyText(code,onSuccess);}
+}
+function pasteProgressCode(sid){
+  var input=prompt('الصق رمز التقدم هنا:');if(!input)return;applyCodeToSession(input.trim(),sid);
+}
+function restoreFromCodeVocab(){
+  var input=$('pasteCodeInput');if(!input||!input.value.trim()){showToast('⚠️ أدخل الرمز أولاً','orange');return;}
+  applyCodeToSession(input.value.trim(),null);
+}
+function applyCodeToSession(code,targetSid){
+  try{
+    var payload=JSON.parse(decodeURIComponent(atob(code)));
+    if(!payload||payload.v!==1){showToast('❌ الرمز غير صحيح','red');return;}
+    var sessions=JSON.parse(localStorage.getItem('vocab_sessions_list')||'[]');
+    var sid=targetSid||payload.id;
+    var idx=sessions.findIndex(function(s){return s.id===sid;});
+    if(idx===-1){showToast('⚠️ لم يتم العثور على الجلسة','red');return;}
+    sessions[idx].data.currentIndex=payload.ci||0;sessions[idx].data.correctCount=payload.correct||0;sessions[idx].data.wrongCount=payload.wrong||0;sessions[idx].data.posErrorCount=payload.posErr||0;
+    if(payload.choices){
+      var rc=sessions[idx].data.answersCache||{};
+      Object.keys(payload.choices).forEach(function(k){if(!rc[k])rc[k]={};rc[k].knew=payload.choices[k].knew===1;if(payload.choices[k].pos)rc[k].posSelected=payload.choices[k].pos;});
+      sessions[idx].data.answersCache=rc;
+    }
+    try{localStorage.setItem('vocab_sessions_list',JSON.stringify(sessions));}catch(e){}
+    showToast('✅ تم استعادة التقدم من الرمز','green');showSessionsModal();
+  }catch(e){showToast('❌ الرمز غير صالح أو تالف','red');}
+}
 function showSessionsModal(){
   var sessions=JSON.parse(localStorage.getItem('vocab_sessions_list')||'[]');
-  var listDiv=$('sessionsList'); listDiv.innerHTML='';
+  var listDiv=document.getElementById('sessionsList'); listDiv.innerHTML='';
   if(sessions.length===0){listDiv.innerHTML='<p style="text-align:center;color:var(--text-muted);">لا توجد جلسات محفوظة.</p>';}
   else{
     [...sessions].reverse().forEach(function(sess){
       var prog=sess.data.currentIndex+1, tot=sess.data.words.length;
-      var item=document.createElement('div'); item.style.cssText='background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:12px;';
-      item.innerHTML='<div style="margin-bottom:8px;font-weight:bold;color:var(--blue);">'+sess.name+'</div><div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">التقدم: '+prog+' / '+tot+'</div><div style="display:flex;gap:8px;"><button style="background:var(--green-dim);color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;" onclick="loadSpecificSession(\''+sess.id+'\')">استعادة</button><button style="background:none;border:1px solid var(--border);color:var(--text-secondary);padding:5px 10px;border-radius:4px;cursor:pointer;" onclick="restartSpecificSession(\''+sess.id+'\')">إعادة</button><button style="background:none;border:1px solid var(--red);color:var(--red);padding:5px 10px;border-radius:4px;cursor:pointer;" onclick="deleteSpecificSession(\''+sess.id+'\')">حذف</button></div>';
+      var item=document.createElement('div');
+      item.style.cssText='background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:6px;';
+      var nameDiv=document.createElement('div'); nameDiv.style.cssText='margin-bottom:6px;font-weight:bold;color:var(--blue);font-size:0.8rem;'; nameDiv.textContent=sess.name;
+      var metaDiv=document.createElement('div'); metaDiv.style.cssText='font-size:11px;color:var(--text-secondary);margin-bottom:8px;'; metaDiv.textContent='التقدم: '+prog+' / '+tot;
+      var row=document.createElement('div'); row.style.cssText='display:flex;gap:6px;flex-wrap:wrap;';
+      var bLoad=document.createElement('button'); bLoad.style.cssText='background:var(--green-dim);color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:0.72rem;'; bLoad.textContent='استعادة'; bLoad.onclick=(function(id){return function(){loadSpecificSession(id);};})(sess.id);
+      var bRestart=document.createElement('button'); bRestart.style.cssText='background:none;border:1px solid var(--border);color:var(--text-secondary);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:0.72rem;'; bRestart.textContent='إعادة'; bRestart.onclick=(function(id){return function(){restartSpecificSession(id);};})(sess.id);
+      var bCopy=document.createElement('button'); bCopy.id='btnCopyCode_'+sess.id; bCopy.style.cssText='background:none;border:1px solid var(--purple-dim);color:var(--purple);padding:5px 9px;border-radius:4px;cursor:pointer;font-size:0.72rem;'; bCopy.textContent='📋 رمز'; bCopy.title='نسخ رمز التقدم'; bCopy.onclick=(function(id){return function(){copyProgressCode(id);};})(sess.id);
+      var bPaste=document.createElement('button'); bPaste.style.cssText='background:none;border:1px solid var(--blue-dim);color:var(--blue);padding:5px 9px;border-radius:4px;cursor:pointer;font-size:0.72rem;'; bPaste.textContent='📥 لصق'; bPaste.title='لصق رمز تقدم'; bPaste.onclick=(function(id){return function(){pasteProgressCode(id);};})(sess.id);
+      var bDel=document.createElement('button'); bDel.style.cssText='background:none;border:1px solid var(--red);color:var(--red);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:0.72rem;'; bDel.textContent='حذف'; bDel.onclick=(function(id){return function(){deleteSpecificSession(id);};})(sess.id);
+      row.appendChild(bLoad); row.appendChild(bRestart); row.appendChild(bCopy); row.appendChild(bPaste); row.appendChild(bDel);
+      item.appendChild(nameDiv); item.appendChild(metaDiv); item.appendChild(row);
       listDiv.appendChild(item);
     });
   }
-  $('sessionsModal').classList.add('show');
+  var restoreDiv=document.createElement('div'); restoreDiv.style.cssText='margin-top:10px;border-top:1px solid var(--border);padding-top:10px;';
+  var restoreLbl=document.createElement('div'); restoreLbl.style.cssText='font-size:0.68rem;color:var(--text-muted);margin-bottom:7px;font-family:monospace;'; restoreLbl.textContent='استعادة من رمز (بعد مسح التخزين):';
+  var restoreRow=document.createElement('div'); restoreRow.style.cssText='display:flex;gap:8px;';
+  var restoreInput=document.createElement('input'); restoreInput.id='pasteCodeInput'; restoreInput.type='text'; restoreInput.placeholder='الصق الرمز هنا...'; restoreInput.style.cssText='flex:1;background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-family:monospace;font-size:0.68rem;outline:none;';
+  var restoreBtn=document.createElement('button'); restoreBtn.style.cssText='background:none;border:1px solid var(--green);color:var(--green);padding:6px 12px;border-radius:4px;cursor:pointer;font-size:0.72rem;'; restoreBtn.textContent='استعادة'; restoreBtn.onclick=restoreFromCodeVocab;
+  restoreRow.appendChild(restoreInput); restoreRow.appendChild(restoreBtn);
+  restoreDiv.appendChild(restoreLbl); restoreDiv.appendChild(restoreRow);
+  listDiv.appendChild(restoreDiv);
+  document.getElementById('sessionsModal').classList.add('show');
 }
 function closeSessionsModal(){$('sessionsModal').classList.remove('show');}
 function loadSpecificSession(sid){
@@ -1137,7 +1199,18 @@ function onShuffleToggle(){
   shuffleEnabled = !shuffleEnabled;
   $('toggleShuffle').classList.toggle('active', shuffleEnabled);
   $('shuffleLabel').textContent = shuffleEnabled ? 'عشوائي' : 'مرتب';
-  showToast(shuffleEnabled ? '🔀 الترتيب العشوائي مفعّل' : '📋 الترتيب الأصلي', '');
+  // إعادة ترتيب الكلمات غير المُجابة فقط للحفاظ على التقدم
+  if(words && words.length > 0){
+    const answeredWords = words.slice(0, currentIndex + 1);
+    const unansweredWords = words.slice(currentIndex + 1);
+    const reordered = shuffleEnabled
+      ? [...unansweredWords].sort(() => Math.random() - 0.5)
+      : unansweredWords;
+    words = [...answeredWords, ...reordered];
+    showToast(shuffleEnabled ? '🔀 الترتيب العشوائي مفعّل (غير المجابة فقط)' : '📋 الترتيب الأصلي', '');
+  } else {
+    showToast(shuffleEnabled ? '🔀 الترتيب العشوائي مفعّل' : '📋 الترتيب الأصلي', '');
+  }
 }
 const $ = id => document.getElementById(id);
 const emptyState     = $('emptyState');
