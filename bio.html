@@ -688,6 +688,10 @@ body.allow-copy-enabled, body.allow-copy-enabled * {
             </button>
             <span class="ai-chevron">▼</span>
           </div>
+          <div id="askAiContainer" style="display:none; padding:12px 14px 0; border-bottom:1px solid rgba(137,87,229,.15);">
+            <textarea id="askAiInput" class="prompt-textarea" style="min-height:60px; margin-bottom:8px;" placeholder="اكتب سؤالك للذكاء الاصطناعي هنا..."></textarea>
+            <button class="btn-prompt-save" onclick="sendAskAi()" style="margin-top:0; margin-bottom:12px;">إرسال السؤال</button>
+          </div>
           <div class="ai-box-body" id="aiBoxBody"></div>
           <div class="ai-rating" id="aiRating" style="display:none; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
   <div style="display:flex; align-items:center; gap:8px;">
@@ -811,6 +815,13 @@ body.allow-copy-enabled, body.allow-copy-enabled * {
   <span style="font-size:0.75rem; font-family:'Noto Kufi Arabic',sans-serif; color:var(--t1);">🛠️ وضع التصحيح اللغوي للسؤال</span>
   <label class="shuffle-toggle" style="margin:0; padding:0; border:none; background:transparent;">
     <input type="checkbox" id="aiCorrectionToggle">
+    <div class="toggle-track" style="width:36px;height:20px;"><div class="toggle-thumb" style="width:14px;height:14px;top:2px;right:2px;"></div></div>
+  </label>
+</div>
+<div style="background:var(--elevated); border:1px solid var(--border); border-radius:var(--rs); padding:10px 14px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+  <span style="font-size:0.75rem; font-family:'Noto Kufi Arabic',sans-serif; color:var(--t1);">💬 وضع اسأل AI (سؤال حر)</span>
+  <label class="shuffle-toggle" style="margin:0; padding:0; border:none; background:transparent;">
+    <input type="checkbox" id="askAiToggle" onchange="toggleAskAiMode()">
     <div class="toggle-track" style="width:36px;height:20px;"><div class="toggle-thumb" style="width:14px;height:14px;top:2px;right:2px;"></div></div>
   </label>
 </div>
@@ -1077,17 +1088,21 @@ function doDiscard() {
 }
 function generateProgressCode(sess) {
   const d = sess.data;
-  const answeredIndices = Object.keys(d.cache || {}).filter(k => d.cache[k].chosen !== undefined).map(Number);
-  const payload = {
-    v: 1, id: sess.id, name: sess.name,
-    ci: d.ci, ok: d.ok, er: d.er,
-    answered: answeredIndices, choices: {}, subject: d.subject
-  };
-  answeredIndices.forEach(idx => {
-    const c = d.cache[idx];
-    if (c) payload.choices[idx] = { ch: c.chosen, ok: c.correct ? 1 : 0 };
-  });
-  return btoa(encodeURIComponent(JSON.stringify(payload)));
+  const p = { v: 2, id: sess.id, c: d.ci, o: d.ok, e: d.er };
+  const maxIdx = Math.max(...Object.keys(d.cache || {}).map(Number), -1);
+  if (maxIdx >= 0) {
+    p.a = new Array(maxIdx + 1).fill(null);
+    Object.keys(d.cache || {}).forEach(k => {
+      const c = d.cache[k];
+      if (c && c.chosen !== undefined) {
+        const oIdx = d.qs[k] && d.qs[k].o ? d.qs[k].o.indexOf(c.chosen) : -1;
+        p.a[k] = oIdx !== -1 ? oIdx : c.chosen;
+      }
+    });
+  } else {
+    p.a = [];
+  }
+  return btoa(encodeURIComponent(JSON.stringify(p)));
 }
 function fallbackCopyText(text, cb) {
   const ta = document.createElement('textarea');
@@ -1104,7 +1119,7 @@ function copyProgressCode(sessionId) {
   function onSuccess() {
     const btn = document.getElementById('btnCopyCode_' + sessionId);
     if (btn) { btn.textContent = '✅ تم'; setTimeout(() => btn.textContent = '📋 رمز', 2000); }
-    toast('📋 تم نسخ رمز التقدم', 'g');
+    toast('📋 تم نسخ رمز التقدم المصغر', 'g');
   }
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(code).then(onSuccess).catch(() => fallbackCopyText(code, onSuccess));
@@ -1123,23 +1138,49 @@ function restoreFromCode() {
 function applyCodeToSession(code, targetSessionId) {
   try {
     const payload = JSON.parse(decodeURIComponent(atob(code)));
-    if (!payload || payload.v !== 1) { toast('❌ الرمز غير صحيح', 'r'); return; }
     let sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
     const sid = targetSessionId || payload.id;
     const idx = sessions.findIndex(s => s.id === sid);
     if (idx === -1) { toast('⚠️ لم يتم العثور على الجلسة. أعد تحميل الجلسة أولاً.', 'r'); return; }
-    sessions[idx].data.ci = payload.ci || 0;
-    sessions[idx].data.ok = payload.ok || 0;
-    sessions[idx].data.er = payload.er || 0;
-    if (payload.choices) {
+    
+    if (payload.v === 2) {
+      sessions[idx].data.ci = payload.c || 0;
+      sessions[idx].data.ok = payload.o || 0;
+      sessions[idx].data.er = payload.e || 0;
       const restoredCache = sessions[idx].data.cache || {};
-      Object.entries(payload.choices).forEach(([k, v]) => {
-        if (!restoredCache[k]) restoredCache[k] = {};
-        restoredCache[k].chosen = v.ch;
-        restoredCache[k].correct = v.ok === 1;
-      });
+      const qs = sessions[idx].data.qs;
+      if (payload.a) {
+        payload.a.forEach((v, k) => {
+          if (v === null) return;
+          if (!restoredCache[k]) restoredCache[k] = {};
+          if (typeof v === 'number' && qs[k] && qs[k].o[v]) {
+            restoredCache[k].chosen = qs[k].o[v];
+            restoredCache[k].correct = (v === qs[k].a);
+          } else {
+            restoredCache[k].chosen = v;
+            if (qs[k] && qs[k].o[qs[k].a] === v) restoredCache[k].correct = true;
+            else restoredCache[k].correct = false;
+          }
+        });
+      }
       sessions[idx].data.cache = restoredCache;
+    } else if (payload.v === 1) {
+      sessions[idx].data.ci = payload.ci || 0;
+      sessions[idx].data.ok = payload.ok || 0;
+      sessions[idx].data.er = payload.er || 0;
+      if (payload.choices) {
+        const restoredCache = sessions[idx].data.cache || {};
+        Object.entries(payload.choices).forEach(([k, v]) => {
+          if (!restoredCache[k]) restoredCache[k] = {};
+          restoredCache[k].chosen = v.ch;
+          restoredCache[k].correct = v.ok === 1;
+        });
+        sessions[idx].data.cache = restoredCache;
+      }
+    } else {
+      toast('❌ الرمز غير صحيح أو غير مدعوم', 'r'); return;
     }
+    
     try { localStorage.setItem('crescent_bio_sessions', JSON.stringify(sessions)); } catch(e) {}
     toast('✅ تم استعادة التقدم من الرمز', 'g');
     showSessionsModal();
@@ -1823,7 +1864,10 @@ function togglePromptEditor() {
   if (chev) chev.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 function showAIBtn() {
-  $('btnAIExplain').classList.add('visible');
+  const btn = $('btnAIExplain');
+  btn.classList.add('visible');
+  const isAsk = $('askAiToggle') && $('askAiToggle').checked;
+  btn.innerHTML = isAsk ? '<span>💬</span> اسأل AI' : '<span>🧠</span> شرح AI';
 }
 function setHeaderBtns(visible) {
   const show = visible ? 'flex' : 'none';
@@ -1999,8 +2043,66 @@ function toggleAIBox() {
 function toggleRationale() {
   $('rationaleDiv').classList.toggle('collapsed');
 }
+function toggleAskAiMode() {
+  const isAsk = $('askAiToggle') && $('askAiToggle').checked;
+  const btn = $('btnAIExplain');
+  if (btn) btn.innerHTML = isAsk ? '<span>💬</span> اسأل AI' : '<span>🧠</span> شرح AI';
+}
+
+async function sendAskAi() {
+  const input = $('askAiInput').value.trim();
+  if (!input) { toast('⚠️ اكتب سؤالك أولاً', 'r'); return; }
+  const key = getActiveKey();
+  if (!key) { toast('⚠️ أضف مفتاح Gemini أولاً', 'r'); openAISettings(); return; }
+
+  const headLoader = $('aiHeadLoader');
+  if (headLoader) headLoader.classList.add('visible');
+  const body = $('aiBoxBody');
+  body.innerHTML = '<div class="ai-loading" style="padding:10px 14px;font-size:0.74rem;color:var(--t3);">جارٍ إرسال السؤال وإعداد الإجابة...</div>';
+  $('aiRating').style.display = 'none';
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: input }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
+        })
+      }
+    );
+    if (!res.ok) throw new Error('خطأ في استجابة الخادم');
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!text) throw new Error('استجابة فارغة');
+    renderAIExplanation(text);
+    if (headLoader) headLoader.classList.remove('visible');
+  } catch (e) {
+    body.innerHTML = '❌ خطأ: تعذر الاتصال أو لم يتم إرجاع إجابة.';
+    if (headLoader) headLoader.classList.remove('visible');
+  }
+}
+
 async function requestAIExplanation(force) {
+  const isAskMode = $('askAiToggle') && $('askAiToggle').checked;
   const aiTitleEl = document.querySelector('.ai-title');
+  const askContainer = $('askAiContainer');
+
+  if (isAskMode) {
+    if (aiTitleEl) aiTitleEl.innerHTML = '<span>💬</span> اسأل AI';
+    $('btnAIExplain').classList.remove('visible');
+    $('aiBox').classList.add('show');
+    $('aiBox').classList.remove('collapsed');
+    if (askContainer) askContainer.style.display = 'block';
+    if ($('aiBoxBody').innerHTML === '') {
+      $('aiBoxBody').innerHTML = '<div style="padding:10px 14px;font-size:0.74rem;color:var(--t3);text-align:center;">اكتب سؤالك في المربع بالأعلى واضغط إرسال</div>';
+    }
+    return;
+  }
+
+  if (askContainer) askContainer.style.display = 'none';
   if (aiTitleEl) {
     if ($('hideChoicesToggle') && $('hideChoicesToggle').checked) {
       aiTitleEl.innerHTML = '<span>✨</span> C.T. Ai';
@@ -2023,11 +2125,10 @@ async function requestAIExplanation(force) {
   }
   const q = qs[ci];
   const correctText = q.o[q.a];
-  const opts        = q.o.map((o, i) => `${i + 1}. ${o}`).join('\n');
-  $('btnAIExplain').classList.remove('visible');
+  const opts        = q.o.map((o, i) => `${i + 1}. ${o}`).join('\n');  $('btnAIExplain').classList.remove('visible');
   const btn = $('btnAIExplain');
   btn.disabled = true;
-  btn.innerHTML = '<span>🧠</span> شرح AI';
+  btn.innerHTML = isAskMode ? '<span>💬</span> اسأل AI' : '<span>🧠</span> شرح AI';
   const headLoader = $('aiHeadLoader');
   if (headLoader) headLoader.classList.add('visible');
   const body = $('aiBoxBody');
@@ -2068,12 +2169,12 @@ async function requestAIExplanation(force) {
       }
       if (headLoader) headLoader.classList.remove('visible');
       btn.disabled = false;
-      btn.innerHTML = '<span>🧠</span> شرح AI';
+      btn.innerHTML = isAskMode ? '<span>💬</span> اسأل AI' : '<span>🧠</span> شرح AI';
       return;
     }
     const data = await res.json();
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!text) { if (headLoader) headLoader.classList.remove('visible'); body.innerHTML = '⚠️ لم تصل إجابة من النموذج. حاول مرة أخرى.'; btn.disabled=false; btn.innerHTML='<span>🧠</span> شرح AI'; return; }
+    if (!text) { if (headLoader) headLoader.classList.remove('visible'); body.innerHTML = '⚠️ لم تصل إجابة من النموذج. حاول مرة أخرى.'; btn.disabled=false; btn.innerHTML= isAskMode ? '<span>💬</span> اسأل AI' : '<span>🧠</span> شرح AI'; return; }
     aiCache[cacheKey] = text;
     renderAIExplanation(text);
     toast('✅ تم إعداد الشرح', 'g');
@@ -2082,9 +2183,10 @@ async function requestAIExplanation(force) {
     if (headLoader2) headLoader2.classList.remove('visible');
     body.innerHTML = '❌ تعذّر الاتصال. تحقق من اتصالك بالإنترنت.';
     btn.disabled = false;
-    btn.innerHTML = '<span>🧠</span> شرح AI';
+    btn.innerHTML = isAskMode ? '<span>💬</span> اسأل AI' : '<span>🧠</span> شرح AI';
   }
 }
+
 (function initAIGear() {
   const key = getActiveKey();
   if (key) $('btnAIGear') && $('btnAIGear').classList.add('has-key');
