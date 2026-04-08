@@ -1088,21 +1088,31 @@ function doDiscard() {
 }
 function generateProgressCode(sess) {
   const d = sess.data;
-  const p = { v: 2, id: sess.id, c: d.ci, o: d.ok, e: d.er };
+  // تحويل وقت الجلسة إلى Base36 لتقليل الحجم بشكل كبير
+  const ts36 = parseInt(sess.id.split('_')[1] || Date.now()).toString(36);
   const maxIdx = Math.max(...Object.keys(d.cache || {}).map(Number), -1);
+  
+  let packedAns = '';
   if (maxIdx >= 0) {
-    p.a = new Array(maxIdx + 1).fill(null);
-    Object.keys(d.cache || {}).forEach(k => {
-      const c = d.cache[k];
-      if (c && c.chosen !== undefined) {
-        const oIdx = d.qs[k] && d.qs[k].o ? d.qs[k].o.indexOf(c.chosen) : -1;
-        p.a[k] = oIdx !== -1 ? oIdx : c.chosen;
+    const b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    // دمج كل إجابتين في حرف واحد (Bit-packing 2 answers per char)
+    // الرقم 7 يمثل (لم يتم الإجابة)
+    for (let i = 0; i <= maxIdx; i += 2) {
+      let a1 = 7, a2 = 7;
+      if (d.cache[i] && d.cache[i].chosen !== undefined && d.qs[i]) {
+        let idx = d.qs[i].o.indexOf(d.cache[i].chosen);
+        a1 = (idx >= 0 && idx < 7) ? idx : 7;
       }
-    });
-  } else {
-    p.a = [];
+      if (i + 1 <= maxIdx && d.cache[i+1] && d.cache[i+1].chosen !== undefined && d.qs[i+1]) {
+        let idx = d.qs[i+1].o.indexOf(d.cache[i+1].chosen);
+        a2 = (idx >= 0 && idx < 7) ? idx : 7;
+      }
+      // دمج 3 بت للإجابة الأولى و 3 بت للثانية = 6 بت
+      packedAns += b64[(a1 << 3) | a2];
+    }
   }
-  return btoa(encodeURIComponent(JSON.stringify(p)));
+  // التنسيق الجديد: P|الجلسة|السؤال_الحالي|الصح|الخطأ|الإجابات_المضغوطة
+  return `P|${ts36}|${d.ci}|${d.ok}|${d.er}|${packedAns}`;
 }
 function fallbackCopyText(text, cb) {
   const ta = document.createElement('textarea');
@@ -1130,61 +1140,64 @@ function pasteProgressCode(sessionId) {
   if (!input) return;
   applyCodeToSession(input.trim(), sessionId);
 }
-function restoreFromCode() {
-  const input = $('pasteCodeInput');
-  if (!input || !input.value.trim()) { toast('⚠️ أدخل الرمز أولاً', 'r'); return; }
-  applyCodeToSession(input.value.trim(), null);
-}
+
 function applyCodeToSession(code, targetSessionId) {
   try {
-    const payload = JSON.parse(decodeURIComponent(atob(code)));
     let sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
+    const parts = code.split('|');
+    
+    // رفض أي رمز قديم لا يبدأ بـ P
+    if (parts[0] !== 'P') {
+      toast('❌ هذا الرمز من النظام القديم ولم يعد مدعوماً.', 'r');
+      return;
+    }
+
+    const payload = {
+      id: 'sess_' + parseInt(parts[1], 36),
+      c: parseInt(parts[2], 10),
+      o: parseInt(parts[3], 10),
+      e: parseInt(parts[4], 10),
+      a: []
+    };
+    
+    // فك تشفير الإجابات المضغوطة
+    const packedAns = parts[5] || '';
+    const b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    for (let i = 0; i < packedAns.length; i++) {
+      let byte6 = b64.indexOf(packedAns[i]);
+      let a1 = (byte6 >> 3) & 7;
+      let a2 = byte6 & 7;
+      payload.a.push(a1 === 7 ? null : a1);
+      payload.a.push(a2 === 7 ? null : a2);
+    }
+
     const sid = targetSessionId || payload.id;
     const idx = sessions.findIndex(s => s.id === sid);
     if (idx === -1) { toast('⚠️ لم يتم العثور على الجلسة. أعد تحميل الجلسة أولاً.', 'r'); return; }
     
-    if (payload.v === 2) {
-      sessions[idx].data.ci = payload.c || 0;
-      sessions[idx].data.ok = payload.o || 0;
-      sessions[idx].data.er = payload.e || 0;
-      const restoredCache = sessions[idx].data.cache || {};
-      const qs = sessions[idx].data.qs;
-      if (payload.a) {
-        payload.a.forEach((v, k) => {
-          if (v === null) return;
-          if (!restoredCache[k]) restoredCache[k] = {};
-          if (typeof v === 'number' && qs[k] && qs[k].o[v]) {
-            restoredCache[k].chosen = qs[k].o[v];
-            restoredCache[k].correct = (v === qs[k].a);
-          } else {
-            restoredCache[k].chosen = v;
-            if (qs[k] && qs[k].o[qs[k].a] === v) restoredCache[k].correct = true;
-            else restoredCache[k].correct = false;
-          }
-        });
+    sessions[idx].data.ci = payload.c || 0;
+    sessions[idx].data.ok = payload.o || 0;
+    sessions[idx].data.er = payload.e || 0;
+    
+    const restoredCache = sessions[idx].data.cache || {};
+    const qs = sessions[idx].data.qs;
+    
+    // استعادة الإجابات باستخدام رقم الفهرس (Index) فقط دون نصوص
+    payload.a.forEach((v, k) => {
+      if (v === null) return;
+      if (!restoredCache[k]) restoredCache[k] = {};
+      if (qs[k] && qs[k].o[v] !== undefined) {
+        restoredCache[k].chosen = qs[k].o[v];
+        restoredCache[k].correct = (v === qs[k].a);
       }
-      sessions[idx].data.cache = restoredCache;
-    } else if (payload.v === 1) {
-      sessions[idx].data.ci = payload.ci || 0;
-      sessions[idx].data.ok = payload.ok || 0;
-      sessions[idx].data.er = payload.er || 0;
-      if (payload.choices) {
-        const restoredCache = sessions[idx].data.cache || {};
-        Object.entries(payload.choices).forEach(([k, v]) => {
-          if (!restoredCache[k]) restoredCache[k] = {};
-          restoredCache[k].chosen = v.ch;
-          restoredCache[k].correct = v.ok === 1;
-        });
-        sessions[idx].data.cache = restoredCache;
-      }
-    } else {
-      toast('❌ الرمز غير صحيح أو غير مدعوم', 'r'); return;
-    }
+    });
+    
+    sessions[idx].data.cache = restoredCache;
     
     try { localStorage.setItem('crescent_bio_sessions', JSON.stringify(sessions)); } catch(e) {}
-    toast('✅ تم استعادة التقدم من الرمز', 'g');
+    toast('✅ تم استعادة التقدم بنجاح', 'g');
     showSessionsModal();
-  } catch(e) { toast('❌ الرمز غير صالح أو تالف', 'r'); }
+  } catch(e) { console.error(e); toast('❌ الرمز غير صالح أو تالف', 'r'); }
 }
 function showSessionsModal() {
   const sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
@@ -1213,15 +1226,6 @@ function showSessionsModal() {
       listDiv.appendChild(itemDiv);
     });
   }
-  const restoreDiv = document.createElement('div');
-  restoreDiv.style.cssText = 'margin-top:10px;border-top:1px solid var(--border);padding-top:10px;';
-  restoreDiv.innerHTML = `
-    <div style="font-size:0.7rem;color:var(--t3);margin-bottom:7px;font-family:Consolas,monospace;">استعادة من رمز (بعد مسح التخزين):</div>
-    <div style="display:flex;gap:8px;">
-      <input id="pasteCodeInput" type="text" placeholder="الصق الرمز هنا..." style="flex:1;background:var(--elevated);border:1px solid var(--border);border-radius:var(--rs);padding:6px 10px;color:var(--t1);font-family:Consolas,monospace;font-size:0.7rem;outline:none;">
-      <button class="btn-nav" style="border-color:var(--green);color:var(--green);padding:6px 12px;font-size:0.72rem;" onclick="restoreFromCode()">استعادة</button>
-    </div>`;
-  listDiv.appendChild(restoreDiv);
   $('sessionsModal').classList.add('show');
 }
 function closeSessionsModal() {
@@ -1371,9 +1375,15 @@ function showQ() {
   if (btnEQ) btnEQ.style.display = editMode ? 'inline-flex' : 'none';
   const div = $('choicesDiv');
   div.innerHTML = '';
+  
+  // التأكد من وجود الكاش والترتيب العشوائي للخيارات لتجنب توقف السكربت
   if (!cache[ci]) {
-    cache[ci] = { shuffled: shuffle(q.o.map((o, i) => ({ text: o, correct: i === q.a }))) };
+    cache[ci] = {};
   }
+  if (!cache[ci].shuffled) {
+    cache[ci].shuffled = shuffle(q.o.map((o, i) => ({ text: o, correct: i === q.a })));
+  }
+  
   const opts = cache[ci].shuffled;
   opts.forEach(opt => {
     const b = document.createElement('button');
