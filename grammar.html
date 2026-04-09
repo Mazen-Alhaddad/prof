@@ -312,6 +312,7 @@ function onShuffleToggle(){
 }
 $('fileInput').addEventListener('change',function(e){
   var file=e.target.files[0]; if(!file)return;
+  var fileNameWithoutExt = file.name.replace(/\.[^\/\.]+$/, "");
   var rd=new FileReader();
   rd.onload=function(ev){
     try{
@@ -329,6 +330,7 @@ $('fileInput').addEventListener('change',function(e){
         return q;
       });
       if(!d.length){toast('لا توجد اسئلة صالحة في الملف','r');return;}
+      d.meta = { actualFileName: fileNameWithoutExt };
       load(d); toast('تم تحميل '+d.length+' سؤال','g');
     }catch(x){toast('خطأ في قراءة الملف: '+x.message,'r');}
   };
@@ -626,7 +628,8 @@ function save(){
   if(!currentSessionId){
     currentSessionId='sess_'+Date.now();
     var dateStr=new Date().toLocaleDateString('ar-EG'), timeStr=new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
-    sessions.push({id:currentSessionId, name:'جلسة '+dateStr+' - '+timeStr, data:sessionData});
+    var sessionName = (DATA_RAW && DATA_RAW.meta && DATA_RAW.meta.actualFileName) ? DATA_RAW.meta.actualFileName : ('جلسة ' + dateStr + ' - ' + timeStr);
+    sessions.push({id:currentSessionId, name:sessionName, data:sessionData});
   }else{
     var idx=sessions.findIndex(function(s){return s.id===currentSessionId;});
     if(idx!==-1)sessions[idx].data=sessionData;
@@ -635,10 +638,27 @@ function save(){
 }
 function generateProgressCode(sess){
   var d=sess.data;
-  var answeredKeys=Object.keys(d.cache||{}).filter(function(k){return d.cache[k]&&d.cache[k].chosen!==undefined;});
-  var payload={v:1,id:sess.id,name:sess.name,ci:d.ci,ok:d.ok,er:d.er,choices:{}};
-  answeredKeys.forEach(function(k){var c=d.cache[k];if(c)payload.choices[k]={ch:c.chosen};});
-  return btoa(encodeURIComponent(JSON.stringify(payload)));
+  var ts36=parseInt(sess.id.split('_')[1]||Date.now()).toString(36);
+  var maxIdx=Math.max.apply(null,Object.keys(d.cache||{}).map(Number).concat([-1]));
+  var packedAns='';
+  if(maxIdx>=0){
+    var b64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    for(var i=0;i<=maxIdx;i+=2){
+      var a1=7,a2=7;
+      if(d.cache[i]&&d.cache[i].chosen!==undefined&&d.qs[i]){
+        var idx=d.qs[i].options.indexOf(d.cache[i].chosen);
+        a1=(idx>=0&&idx<7)?idx:7;
+      }
+      if(i+1<=maxIdx&&d.cache[i+1]&&d.cache[i+1].chosen!==undefined&&d.qs[i+1]){
+        var idx2=d.qs[i+1].options.indexOf(d.cache[i+1].chosen);
+        a2=(idx2>=0&&idx2<7)?idx2:7;
+      }
+      packedAns+=b64[(a1<<3)|a2];
+    }
+  }
+  var baseCode="P|"+ts36+"|"+d.ci+"|"+d.ok+"|"+d.er+"|"+packedAns;
+  var fileName=d.DATA_RAW&&d.DATA_RAW.meta?d.DATA_RAW.meta.actualFileName:(sess.name||'غير_معروف');
+  return baseCode+"\n[ملف: "+fileName+"]";
 }
 function fallbackCopyText(text,cb){
   var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;top:-9999px;left:-9999px;opacity:0;';
@@ -661,21 +681,63 @@ function restoreFromCode(){
 }
 function applyCodeToSession(code,targetSid){
   try{
-    var payload=JSON.parse(decodeURIComponent(atob(code)));
-    if(!payload||payload.v!==1){toast('❌ الرمز غير صحيح','r');return;}
+    var match=code.match(/P\|[A-Za-z0-9\-_|]+/);
+    if(!match){toast('❌ هذا الرمز غير صالح.','r');return;}
+    var cleanCode=match[0];
     var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
+    var parts=cleanCode.split('|');
+    if(parts[0]!=='P'){toast('❌ رمز قديم غير مدعوم.','r');return;}
+    
+    var payload={
+      id:'sess_'+parseInt(parts[1],36),
+      ci:parseInt(parts[2],10)||0,
+      ok:parseInt(parts[3],10)||0,
+      er:parseInt(parts[4],10)||0,
+      a:[]
+    };
+    var packedAns=parts[5]||'';
+    var b64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    for(var i=0;i<packedAns.length;i++){
+      var byte6=b64.indexOf(packedAns[i]);
+      var a1=(byte6>>3)&7;
+      var a2=byte6&7;
+      payload.a.push(a1===7?null:a1);
+      payload.a.push(a2===7?null:a2);
+    }
     var sid=targetSid||payload.id;
     var idx=sessions.findIndex(function(s){return s.id===sid;});
-    if(idx===-1){toast('⚠️ لم يتم العثور على الجلسة','r');return;}
-    sessions[idx].data.ci=payload.ci||0;sessions[idx].data.ok=payload.ok||0;sessions[idx].data.er=payload.er||0;
-    if(payload.choices){
-      var rc=sessions[idx].data.cache||{};
-      Object.keys(payload.choices).forEach(function(k){if(!rc[k])rc[k]={};rc[k].chosen=payload.choices[k].ch;});
-      sessions[idx].data.cache=rc;
-    }
+    if(idx===-1){toast('⚠️ لم يتم العثور على الجلسة. أعد تحميل الجلسة أولاً.','r');return;}
+    
+    sessions[idx].data.ci=payload.ci;
+    sessions[idx].data.ok=payload.ok;
+    sessions[idx].data.er=payload.er;
+    
+    var restoredCache=sessions[idx].data.cache||{};
+    var qs=sessions[idx].data.qs;
+    var newErItems=[];
+    var newRuleErr={};
+    
+    payload.a.forEach(function(v,k){
+      if(v===null)return;
+      if(!restoredCache[k])restoredCache[k]={};
+      if(qs[k]&&qs[k].options&&qs[k].options[v]!==undefined){
+        var chosen = qs[k].options[v];
+        restoredCache[k].chosen=chosen;
+        if(chosen !== qs[k].answer){
+          newErItems.push({q: qs[k], chosen: chosen});
+          var rk=(qs[k].rule||'')+"|||"+(qs[k].ruleAr||'');
+          newRuleErr[rk]=(newRuleErr[rk]||0)+1;
+        }
+      }
+    });
+    
+    sessions[idx].data.cache=restoredCache;
+    sessions[idx].data.erItems=newErItems;
+    sessions[idx].data.ruleErr=newRuleErr;
+    
     try{localStorage.setItem('grammar_sessions_list',JSON.stringify(sessions));}catch(e){}
-    toast('✅ تم استعادة التقدم من الرمز','g');showSessionsModal();
-  }catch(e){toast('❌ الرمز غير صالح أو تالف','r');}
+    toast('✅ تم استعادة التقدم بنجاح','g');showSessionsModal();
+  }catch(e){console.error(e);toast('❌ الرمز غير صالح أو تالف','r');}
 }
 function showSessionsModal(){
   var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
@@ -698,9 +760,7 @@ function showSessionsModal(){
       listDiv.appendChild(item);
     });
   }
-  var restoreDiv=document.createElement('div'); restoreDiv.style.cssText='margin-top:10px;border-top:1px solid var(--border);padding-top:10px;';
-  restoreDiv.innerHTML='<div style="font-size:0.68rem;color:var(--t3);margin-bottom:7px;font-family:Consolas,monospace;">استعادة من رمز (بعد مسح التخزين):</div><div style="display:flex;gap:8px;"><input id="pasteCodeInput" type="text" placeholder="الصق الرمز هنا..." style="flex:1;background:var(--elevated);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--t1);font-family:Consolas,monospace;font-size:0.68rem;outline:none;"><button style="background:none;border:1px solid var(--green);color:var(--green);padding:6px 12px;border-radius:4px;cursor:pointer;font-size:0.72rem;" onclick="restoreFromCode()">استعادة</button></div>';
-  listDiv.appendChild(restoreDiv);
+  // تم إخفاء مربع لصق الرمز من هنا لمنع التكرار
   $('sessionsModal').classList.add('show');
 }
 function closeSessionsModal(){$('sessionsModal').classList.remove('show');}
