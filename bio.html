@@ -1028,6 +1028,7 @@ function goHome() {
 $('jsonFileInput').addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
+  const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
   const reader = new FileReader();
   reader.onload = ev => {
     try {
@@ -1036,6 +1037,8 @@ $('jsonFileInput').addEventListener('change', e => {
         toast('❌ الملف لا يحتوي على أسئلة (mcq فارغ أو غير موجود)', 'r');
         return;
       }
+      if (!parsed.meta) parsed.meta = {};
+      parsed.meta.actualFileName = fileNameWithoutExt;
       loadData(parsed, true, null);
       toast('✅ تم تحميل ' + file.name + ' — ' + parsed.mcq.length + ' سؤال', 'g');
     } catch(err) {
@@ -1111,8 +1114,10 @@ function generateProgressCode(sess) {
       packedAns += b64[(a1 << 3) | a2];
     }
   }
-  // التنسيق الجديد: P|الجلسة|السؤال_الحالي|الصح|الخطأ|الإجابات_المضغوطة
-  return `P|${ts36}|${d.ci}|${d.ok}|${d.er}|${packedAns}`;
+  // التنسيق الجديد مع إدراج اسم الملف تحته بشكل معزول
+  const baseCode = `P|${ts36}|${d.ci}|${d.ok}|${d.er}|${packedAns}`;
+  const fileName = d.fullData?.meta?.actualFileName || d.subject || 'غير_معروف';
+  return `${baseCode}\n[ملف: ${fileName}]`;
 }
 function fallbackCopyText(text, cb) {
   const ta = document.createElement('textarea');
@@ -1143,8 +1148,16 @@ function pasteProgressCode(sessionId) {
 
 function applyCodeToSession(code, targetSessionId) {
   try {
+    // عزل كود التقدم فقط وتجاهل اسم الملف أو أي نص إضافي تم نسخه
+    const match = code.match(/P\|[A-Za-z0-9\-_|]+/);
+    if (!match) {
+      toast('❌ هذا الرمز غير صالح أو لم يعد مدعوماً.', 'r');
+      return;
+    }
+    const cleanCode = match[0];
+    
     let sessions = JSON.parse(localStorage.getItem('crescent_bio_sessions') || '[]');
-    const parts = code.split('|');
+    const parts = cleanCode.split('|');
     
     // رفض أي رمز قديم لا يبدأ بـ P
     if (parts[0] !== 'P') {
