@@ -35,7 +35,17 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
 .bar-fill{height:100%;background:linear-gradient(90deg,var(--blue2),var(--purple2));border-radius:99px;transition:width .4s;width:0%;}
 .card{background:#0f1623;border:3px solid #374151;border-radius:var(--r);padding:20px 24px;margin-bottom:8px;}
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:8px;}
-.card-num{font-family:Consolas,monospace;font-size:0.65rem;color:var(--t3);padding:3px 8px;background:var(--elevated);border-radius:4px;border:1px solid var(--bm);flex-shrink:0;}
+  .card-num{font-family:Consolas,monospace;font-size:0.65rem;color:var(--t3);padding:3px 8px;background:var(--elevated);border-radius:4px;border:1px solid var(--bm);flex-shrink:0;}
+  .card-source {
+    font-family: 'Noto Kufi Arabic', sans-serif;
+    font-size: 0.6rem;
+    color: var(--blue);
+    padding: 2px 9px;
+    background: rgba(42, 125, 225, .1);
+    border-radius: 4px;
+    border: 1px solid rgba(42, 125, 225, .25);
+    white-space: nowrap;
+  }
 .rule-wrap{display:flex;flex-direction:column;align-items:flex-end;}
 .rule-en{font-family:Consolas,monospace;font-size:0.64rem;color:var(--purple);padding:2px 8px;background:rgba(137,87,229,.12);border-radius:4px 4px 0 0;border:1px solid rgba(137,87,229,.3);border-bottom:none;white-space:nowrap;}
 .rule-ar{font-size:0.62rem;color:var(--purple);padding:2px 8px;background:rgba(137,87,229,.07);border-radius:0 0 4px 4px;border:1px solid rgba(137,87,229,.2);white-space:nowrap;}
@@ -198,6 +208,14 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
     <div id="sessionsList" style="display:flex;flex-direction:column;gap:10px;"></div>
   </div>
 </div>
+<div id="passageModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:var(--surface); padding:20px; border-radius:var(--r); max-width:600px; width:100%; max-height:80vh; overflow-y:auto; position:relative; border:1px solid var(--border);">
+    <h2 style="margin-bottom: 15px; color:var(--blue);">📄 نص القطعة</h2>
+    <div id="passageEn" style="margin-bottom: 15px; font-size: 16px; line-height: 1.6; text-align: left; direction: ltr; background: var(--bg); padding: 15px; border-radius: var(--rs); color: var(--t1);"></div>
+    <div id="passageAr" style="font-size: 16px; line-height: 1.6; text-align: right; direction: rtl; background: var(--elevated); padding: 15px; border-radius: var(--rs); color: var(--t2);"></div>
+    <button onclick="document.getElementById('passageModal').style.display='none'" style="margin-top: 20px; width: 100%; padding:10px; background:var(--border); color:var(--t1); border:none; border-radius:var(--rs); cursor:pointer; font-family:inherit;">إغلاق</button>
+  </div>
+</div>
 <div id="resumeBanner" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:rgba(86,211,100,.08);border:1px solid rgba(86,211,100,.25);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:0.78rem;color:#adbac7;">
   <div style="flex:1;">
     <strong style="color:#56d364;display:block;font-size:0.8rem;margin-bottom:2px;">&#x1F4DA; جلسة سابقة</strong>
@@ -225,7 +243,11 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
 <div id="quizDiv" style="display:none">
   <div class="card">
     <div class="card-top">
-      <div class="card-num" id="cardNum">#1</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div class="card-num" id="cardNum">#1</div>
+        <div id="passageBtn" style="display:none; cursor:pointer; background:var(--blue2); color:white; padding:2px 8px; border-radius:4px; font-size:0.65rem; text-align:center; transition: 0.2s;" onclick="showPassageModal()">📄 عرض القطعة</div>
+      </div>
+      <span class="card-source" id="cardSource" style="display:none;"></span>
     </div>
     <div class="sentence" id="sentDiv"></div>
     <div class="choices" id="choicesDiv"></div>
@@ -320,8 +342,17 @@ $('fileInput').addEventListener('change',function(e){
       var text=new TextDecoder('utf-8').decode(new Uint8Array(buf));
       if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
       var d=JSON.parse(text);
+      var loadedPassages = null;
+
+      // تعديل لدعم الملفات التي تحتوي على كائن يضم questions و passages
+      if (d && !Array.isArray(d) && d.questions) {
+        loadedPassages = d.passages;
+        d = d.questions;
+      }
+
       if(!Array.isArray(d)){toast('الملف يجب أن يكون مصفوفة [ ]','r');return;}
       if(!d.length){toast('الملف فارغ','r');return;}
+      
       d=d.filter(function(q){return q&&(q.sentence||q.question||q.text||q.q);});
       d=d.map(function(q){
         if(!q.sentence){q.sentence=q.question||q.text||q.q||'';}
@@ -329,8 +360,15 @@ $('fileInput').addEventListener('change',function(e){
         if(!q.answer&&q.correct){q.answer=q.correct;}
         return q;
       });
+      
       if(!d.length){toast('لا توجد اسئلة صالحة في الملف','r');return;}
       d.meta = { actualFileName: fileNameWithoutExt };
+      
+      // إرفاق القطع (passages) مع البيانات لتعمل ميزة "عرض القطعة"
+      if (loadedPassages) {
+        d.passages = loadedPassages;
+      }
+
       load(d); toast('تم تحميل '+d.length+' سؤال','g');
     }catch(x){toast('خطأ في قراءة الملف: '+x.message,'r');}
   };
@@ -371,6 +409,23 @@ function showQ(){
   var q=qs[ci]; if(!q)return;
   answered=false;
   $('cardNum').textContent='#'+(ci+1);
+  var srcEl = $('cardSource');
+  if (srcEl) {
+    if (q.exam) { 
+      srcEl.textContent = 'نموذج ' + q.exam; 
+      srcEl.style.display = 'inline'; 
+    } else { 
+      srcEl.style.display = 'none'; 
+    }
+  }
+  var pBtn = document.getElementById('passageBtn');
+  if (pBtn) {
+    if (q.passageId) {
+      pBtn.style.display = 'block';
+    } else {
+      pBtn.style.display = 'none';
+    }
+  }
   $('lblEn').textContent=q.rule||'-';
   $('lblAr').textContent=q.ruleAr||'-';
   $('secExp').classList.remove('open');
@@ -793,11 +848,21 @@ function restartSpecificSession(sid){
 
 
 function clearSave(){currentSessionId=null;}
-function doDiscard(){currentSessionId=null; $('resumeBanner').style.display='none'; load(originalQs);}
-(function(){
-  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
-  if(sessions.length>0){ $('resumeInfo').textContent='لديك '+sessions.length+' جلسة محفوظة.'; $('resumeBanner').style.display='flex'; }
-})();
+	function doDiscard(){currentSessionId=null; $('resumeBanner').style.display='none'; load(originalQs);}
+	function showPassageModal() {
+	  if (typeof qs === 'undefined' || typeof DATA_RAW === 'undefined') return;
+	  var q = qs[ci];
+	  if (!q.passageId || !DATA_RAW.passages) return;
+	  var pass = DATA_RAW.passages.find(function(p){ return p.id === q.passageId; });
+	  if (!pass) return;
+	  document.getElementById('passageEn').textContent = pass.en;
+	  document.getElementById('passageAr').textContent = pass.ar;
+	  document.getElementById('passageModal').style.display = 'flex';
+	}
+	(function(){
+	  var sessions=JSON.parse(localStorage.getItem('grammar_sessions_list')||'[]');
+	  if(sessions.length>0){ $('resumeInfo').textContent='لديك '+sessions.length+' جلسة محفوظة.'; $('resumeBanner').style.display='flex'; }
+	})();
 </script>
 <script>
 if ("serviceWorker" in navigator) {
