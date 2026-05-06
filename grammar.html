@@ -46,9 +46,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
     border: 1px solid rgba(42, 125, 225, .25);
     white-space: nowrap;
   }
-.rule-wrap{display:flex;flex-direction:column;align-items:flex-end;}
-.rule-en{font-family:Consolas,monospace;font-size:0.64rem;color:var(--purple);padding:2px 8px;background:rgba(137,87,229,.12);border-radius:4px 4px 0 0;border:1px solid rgba(137,87,229,.3);border-bottom:none;white-space:nowrap;}
-.rule-ar{font-size:0.62rem;color:var(--purple);padding:2px 8px;background:rgba(137,87,229,.07);border-radius:0 0 4px 4px;border:1px solid rgba(137,87,229,.2);white-space:nowrap;}
+/* تم إزالة تنسيقات المربع البنفسجي */
 .sentence{text-align:center;padding:4px 0 16px;font-family:Consolas,'Courier New',monospace;font-size:clamp(0.9rem,3vw,1.1rem);font-weight:700;color:var(--t1);direction:ltr;line-height:2.5;}
 .word{display:inline;padding:1px 2px;border-radius:3px;}
 .word.tip{cursor:help;}.word.tip:hover{background:rgba(121,184,255,.1);}
@@ -171,8 +169,9 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
 /* رأس الصندوق (أزرار التبديل والعنوان) */
 #passageModal .modal-header {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 15px 20px; background: transparent;
+    padding: 12px 20px; background: transparent;
     border-bottom: 1px solid var(--border);
+    flex-direction: row-reverse; /* لجعل الأزرار على اليسار والعنوان على اليمين */
 }
 
 /* أزرار التبديل */
@@ -181,7 +180,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
 }
 .lang-btn {
     background: #2d3748; color: var(--t2); border: none; border-radius: 6px;
-    padding: 6px 16px; font-size: 0.85rem; font-weight: bold;
+    padding: 4px 12px; font-size: 0.75rem; font-weight: bold;
     cursor: pointer; transition: 0.2s; font-family: inherit;
 }
 .lang-btn.active {
@@ -216,8 +215,9 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
     cursor: pointer; border-top: 1px solid var(--border);
     font-family: inherit; transition: 0.2s;
 }
-.close-bottom-btn:hover { background: var(--border); color: var(--red); }}
-.tooltip{position:fixed;background:#1e2736;border:1px solid var(--border);border-radius:var(--rs);padding:6px 11px;z-index:9999;pointer-events:none;white-space:nowrap;box-shadow:0 4px 18px rgba(0,0,0,.5);display:none;direction:rtl;align-items:center;gap:7px;font-size:0.76rem;transition:opacity .2s;}
+.close-bottom-btn:hover { background: var(--border); color: var(--red); }
+
+.tooltip{position:fixed;background:#1e2736;border:1px solid var(--border);border-radius:var(--rs);padding:6px 11px;z-index:10001;pointer-events:none;white-space:nowrap;box-shadow:0 4px 18px rgba(0,0,0,.5);display:none;direction:rtl;align-items:center;gap:7px;font-size:0.76rem;transition:opacity .2s;}
 .tooltip.show{display:flex;}
 .tt-ar{font-weight:700;color:var(--t1);}
 .tt-pos{font-family:Consolas,monospace;font-size:0.58rem;padding:2px 5px;border-radius:3px;border:1px solid var(--purple2);color:var(--purple);background:rgba(137,87,229,.12);}
@@ -552,17 +552,25 @@ function showTip(el){
   var t=$('ttip');
   t.classList.remove('show');
   t.style.opacity='0';
-  t.style.top='-9999px';t.style.left='-9999px';
-  t.classList.add('show');
+  t.style.display='flex'; // تأكد من أن العنصر مرئي لحساب الأبعاد
+  
   var r=el.getBoundingClientRect(),tw=t.offsetWidth,th=t.offsetHeight;
   var top=r.top-th-10,left=r.left+r.width/2-tw/2;
-  if(top<8)top=r.bottom+8;if(left<8)left=8;if(left+tw>window.innerWidth-8)left=window.innerWidth-tw-8;
-  t.style.top=top+'px';t.style.left=left+'px';
+  
+  // معالجة الحدود لضمان بقاء التلميح داخل الشاشة
+  if(top<8)top=r.bottom+8;
+  if(left<8)left=8;
+  if(left+tw>window.innerWidth-8)left=window.innerWidth-tw-8;
+  
+  t.style.top=top+'px';
+  t.style.left=left+'px';
   t.style.opacity='1';
+  t.classList.add('show');
+  
   clearTimeout(ttTimer);
   ttTimer=setTimeout(function(){
     t.style.opacity='0';
-    setTimeout(function(){t.classList.remove('show');},200);
+    setTimeout(function(){t.classList.remove('show'); t.style.display='none';},200);
   },1500);
 }
 function renderChoices(q){
