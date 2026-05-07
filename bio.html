@@ -4,6 +4,174 @@
 <link rel="manifest" href="./manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Professional Quiz</title>
+<style>
+/* ── Inline Math Styles (no CDN needed) ── */
+.math-frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 2px;font-size:0.85em;}
+.math-frac .math-num{border-bottom:1px solid currentColor;padding:0 2px;text-align:center;}
+.math-frac .math-den{padding:0 2px;text-align:center;}
+.math-sup{vertical-align:super;font-size:0.72em;line-height:1;}
+.math-sub{vertical-align:sub;font-size:0.72em;line-height:1;}
+.math-sqrt{display:inline-block;position:relative;padding:1px 4px 1px 14px;border-top:1.5px solid currentColor;margin:0 2px;}
+.math-sqrt::before{content:'√';position:absolute;left:2px;top:50%;transform:translateY(-50%);font-size:1em;}
+.math-inline{display:inline;font-family:'Times New Roman',serif;}
+.math-block{display:block;text-align:center;margin:8px 0;font-family:'Times New Roman',serif;font-size:1.05em;}
+.math-sym{font-family:'Times New Roman',serif;font-style:italic;}
+</style>
+<script>
+(function(){
+  // Lightweight LaTeX → HTML renderer (offline, no CDN)
+  const SYMBOLS = {
+    '\\alpha':'α','\\beta':'β','\\gamma':'γ','\\delta':'δ','\\epsilon':'ε',
+    '\\zeta':'ζ','\\eta':'η','\\theta':'θ','\\iota':'ι','\\kappa':'κ',
+    '\\lambda':'λ','\\mu':'μ','\\nu':'ν','\\xi':'ξ','\\pi':'π',
+    '\\rho':'ρ','\\sigma':'σ','\\tau':'τ','\\upsilon':'υ','\\phi':'φ',
+    '\\chi':'χ','\\psi':'ψ','\\omega':'ω',
+    '\\Alpha':'Α','\\Beta':'Β','\\Gamma':'Γ','\\Delta':'Δ','\\Theta':'Θ',
+    '\\Lambda':'Λ','\\Xi':'Ξ','\\Pi':'Π','\\Sigma':'Σ','\\Phi':'Φ',
+    '\\Psi':'Ψ','\\Omega':'Ω',
+    '\\pm':'±','\\mp':'∓','\\times':'×','\\div':'÷','\\cdot':'·',
+    '\\leq':'≤','\\geq':'≥','\\neq':'≠','\\approx':'≈','\\equiv':'≡',
+    '\\rightarrow':'→','\\leftarrow':'←','\\leftrightarrow':'↔',
+    '\\Rightarrow':'⇒','\\Leftarrow':'⇐','\\Leftrightarrow':'⇔',
+    '\\infty':'∞','\\partial':'∂','\\nabla':'∇','\\forall':'∀','\\exists':'∃',
+    '\\in':'∈','\\notin':'∉','\\subset':'⊂','\\supset':'⊃',
+    '\\cup':'∪','\\cap':'∩','\\emptyset':'∅',
+    '\\sum':'∑','\\prod':'∏','\\int':'∫',
+    '\\circ':'∘','\\bullet':'•','\\ldots':'…','\\cdots':'⋯',
+    '\\degree':'°','\\ ':' ','\\,':' ','\\;':' ','\\!':'',
+    '\\text':''
+  };
+
+  function tok(latex){
+    // Tokenize: returns array of chars/commands/groups
+    const tokens=[];
+    let i=0;
+    while(i<latex.length){
+      if(latex[i]==='\\'){
+        let j=i+1;
+        if(j<latex.length && /[a-zA-Z]/.test(latex[j])){
+          while(j<latex.length && /[a-zA-Z]/.test(latex[j])) j++;
+          tokens.push(latex.slice(i,j));
+          i=j;
+        } else {
+          tokens.push(latex.slice(i,i+2));
+          i+=2;
+        }
+      } else if(latex[i]==='{'){
+        // find matching }
+        let depth=1,j=i+1;
+        while(j<latex.length && depth>0){
+          if(latex[j]==='{') depth++;
+          else if(latex[j]==='}') depth--;
+          j++;
+        }
+        tokens.push(latex.slice(i,j));
+        i=j;
+      } else {
+        tokens.push(latex[i]);
+        i++;
+      }
+    }
+    return tokens;
+  }
+
+  function parseGroup(s){
+    if(s && s[0]==='{' && s[s.length-1]==='}') return renderLatex(s.slice(1,-1));
+    return renderLatex(s||'');
+  }
+
+  function renderLatex(latex){
+    if(!latex) return '';
+    latex=latex.trim();
+    const tokens=tok(latex);
+    let html='';
+    let i=0;
+    while(i<tokens.length){
+      const t=tokens[i];
+      // fraction
+      if(t==='\\frac'){
+        const num=tokens[++i]||'';
+        const den=tokens[++i]||'';
+        html+=`<span class="math-frac"><span class="math-num">${parseGroup(num)}</span><span class="math-den">${parseGroup(den)}</span></span>`;
+        i++;continue;
+      }
+      // sqrt
+      if(t==='\\sqrt'){
+        const inner=tokens[++i]||'';
+        html+=`<span class="math-sqrt">${parseGroup(inner)}</span>`;
+        i++;continue;
+      }
+      // text
+      if(t==='\\text'){
+        const inner=tokens[++i]||'';
+        const txt=inner[0]==='{' ? inner.slice(1,-1) : inner;
+        html+=txt;
+        i++;continue;
+      }
+      // known symbol
+      if(SYMBOLS[t]!==undefined){
+        html+=SYMBOLS[t];
+        i++;continue;
+      }
+      // group {}
+      if(t && t[0]==='{'){
+        html+=parseGroup(t);
+        i++;continue;
+      }
+      // superscript
+      if(t==='^'){
+        const next=tokens[++i]||'';
+        html+=`<span class="math-sup">${parseGroup(next)}</span>`;
+        i++;continue;
+      }
+      // subscript
+      if(t==='_'){
+        const next=tokens[++i]||'';
+        html+=`<span class="math-sub">${parseGroup(next)}</span>`;
+        i++;continue;
+      }
+      // plain char
+      html+=t;
+      i++;
+    }
+    return html;
+  }
+
+  function processNode(text){
+    // Replace $$...$$ (display)
+    text=text.replace(/\$\$([^$]+?)\$\$/g,(_,m)=>`<span class="math-block math-inline">${renderLatex(m)}</span>`);
+    // Replace $...$ (inline) — avoid $$ already handled
+    text=text.replace(/\$([^$\n]+?)\$/g,(_,m)=>`<span class="math-inline">${renderLatex(m)}</span>`);
+    // Replace \(...\)
+    text=text.replace(/\\\((.+?)\\\)/g,(_,m)=>`<span class="math-inline">${renderLatex(m)}</span>`);
+    // Replace \[...\]
+    text=text.replace(/\\\[(.+?)\\\]/g,(_,m)=>`<span class="math-block math-inline">${renderLatex(m)}</span>`);
+    return text;
+  }
+
+  window.renderMathInElement=function(el){
+    if(!el) return;
+    // Process text nodes only to avoid corrupting HTML
+    const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false);
+    const nodes=[];
+    let node;
+    while((node=walker.nextNode())) nodes.push(node);
+    nodes.forEach(n=>{
+      if(n.nodeValue && /\$|\\\(|\\\[/.test(n.nodeValue)){
+        const span=document.createElement('span');
+        span.innerHTML=processNode(n.nodeValue);
+        n.parentNode.replaceChild(span,n);
+      }
+    });
+  };
+
+  // Also handle innerHTML that already contains $ signs
+  const _orig_renderMathInElement=window.renderMathInElement;
+  window.renderMathInElement=function(el,opts){
+    _orig_renderMathInElement(el);
+  };
+})();
+</script>
 <meta name="theme-color" content="#0d1117">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1344,6 +1512,20 @@ function retryWrong() {
   clearSession();
 }
 function shuffle(a) { return a.sort(() => Math.random() - 0.5); }
+const KATEX_OPTS = {
+  delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '$', right: '$', display: false},
+    {left: '\\(', right: '\\)', display: false},
+    {left: '\\[', right: '\\]', display: true}
+  ],
+  throwOnError: false
+};
+function renderMath(el) {
+  if (window.renderMathInElement) {
+    renderMathInElement(el, KATEX_OPTS);
+  }
+}
 function showQ() {
   answered = false;
   const q = qs[ci];
@@ -1359,11 +1541,13 @@ function showQ() {
   $('btnPrev').disabled    = ci === 0;
   $('btnNext').disabled    = true;
   $('qText').innerHTML     = q.q;
+  renderMath($('qText'));
   const noteEl = $('qNote');
   const noteBody = $('qNoteBody');
   const noteText = q.note || q.hint || q.info || q['ملاحظة'] || q['توضيح'];
   if (noteText) {
     noteBody.innerHTML = noteText;
+    renderMath(noteBody);
     noteEl.classList.add('show');
     noteEl.classList.add('collapsed'); 
   } else {
@@ -1401,9 +1585,10 @@ function showQ() {
   opts.forEach(opt => {
     const b = document.createElement('button');
     b.className   = 'choice';
-    b.textContent = opt.text;
+    b.innerHTML = opt.text;
     b.addEventListener('click', () => handleAnswer(b, opt.correct, opts, q));
     div.appendChild(b);
+    renderMath(b);
   });
   if (cache[ci].chosen !== undefined) {
     answered = true;
@@ -1435,7 +1620,8 @@ function handleAnswer(btn, correct, opts, q) {
 }
 function showRationale(q) {
   if (!q.r) return;
-  $('rationaleText').textContent = q.r;
+  $('rationaleText').innerHTML = q.r;
+  renderMath($('rationaleText'));
   $('rationaleDiv').classList.add('show', 'collapsed');
 }
 function applyUI(opts, chosen) {
@@ -1519,6 +1705,7 @@ function buildReview() {
       </div>
       <div class="review-opts">${optsHTML}</div>
       ${ratHTML}`;
+    renderMath(item);
     if (c.correct) okList.appendChild(item);
     else           erList.appendChild(item);
   });
@@ -1561,6 +1748,7 @@ function buildNotes() {
       </div>
       <div class="notes-body">${body}</div>`;
     c.appendChild(el);
+    renderMath(el);
   });
 }
 function showTab(t) {
@@ -2041,6 +2229,7 @@ function mdToHtml(text) {
 function renderAIExplanation(text) {
   const body = $('aiBoxBody');
   body.innerHTML = mdToHtml(text);
+  renderMath(body);
   const btnApply = document.getElementById('btnApplyCorrection');
   if (btnApply) {
     const isCorrectionMode = document.getElementById('aiCorrectionToggle') && document.getElementById('aiCorrectionToggle').checked;
@@ -2343,7 +2532,10 @@ function applyAICorrection() {
         try { localStorage.setItem(JSON_KEY, JSON.stringify(DATA)); } catch(e) {}
         saveSession();
         const qTextEl = document.getElementById('qText');
-        if (qTextEl) qTextEl.innerHTML = qs[ci].q;
+        if (qTextEl) {
+          qTextEl.innerHTML = qs[ci].q;
+          renderMath(qTextEl);
+        }
         const div = document.getElementById('choicesDiv');
         if (div) {
           div.innerHTML = '';
@@ -2351,9 +2543,10 @@ function applyAICorrection() {
           currentOpts.forEach(opt => {
             const b = document.createElement('button');
             b.className = 'choice';
-            b.textContent = opt.text;
+            b.innerHTML = opt.text;
             b.onclick = () => handleAnswer(b, opt.correct, currentOpts, qs[ci]);
             div.appendChild(b);
+            renderMath(b);
           });
           if (cache[ci] && cache[ci].chosen !== undefined) {
              applyUI(currentOpts, cache[ci].chosen);
